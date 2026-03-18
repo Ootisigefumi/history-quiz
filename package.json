@@ -1,0 +1,23 @@
+{
+  "name": "history-quiz",
+  "version": "1.0.0",
+  "description": "歴史年表クイズ自動生成アプリ",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve . -p 3456",
+    "cap:sync": "npx cap sync",
+    "cap:ios": "npx cap open ios",
+    "cap:android": "npx cap open android"
+  },
+  "keywords": ["history", "quiz", "education", "ocr"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@capacitor/core": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "@capacitor/android": "^6.0.0"
+  }
+}

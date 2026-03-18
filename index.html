@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0d0d14" />
+  <title>歴史年表クイズ | 自動生成学習アプリ</title>
+  <meta name="description" content="歴史年表の画像をアップロードして、自動でクイズを作成する学習アプリです。" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- ===== ヘッダー ===== -->
+  <header class="app-header">
+    <span class="logo-icon">🏯</span>
+    <h1>歴史年表クイズ</h1>
+    <p>画像から読み取り、自動で問題を作成</p>
+  </header>
+
+  <!-- ===================================================
+       ホーム画面
+  =================================================== -->
+  <section id="screen-home" class="screen active">
+
+    <!-- 画像アップロード -->
+    <div class="card">
+      <div class="card-title">📷 画像をアップロード</div>
+      <div class="upload-zone" id="uploadZone">
+        <input
+          type="file"
+          id="fileInput"
+          accept="image/jpeg,image/png,image/jpg,application/pdf"
+          multiple
+        />
+        <span class="upload-icon">🖼️</span>
+        <p class="upload-text">ここをクリック、または画像をドラッグ＆ドロップ</p>
+        <p class="upload-hint">JPG / PNG / PDF 対応 ・ 最大100枚(ページ)</p>
+      </div>
+
+      <!-- OCR 進捗バー -->
+      <div class="ocr-progress-wrap" id="ocrProgressWrap">
+        <p class="ocr-status-text" id="ocrStatusText">読み取り中... 0 / 0</p>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="ocrProgressBar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 手動データ入力 -->
+    <div class="card">
+      <div class="card-title">✏️ 手動でデータを追加</div>
+      <div class="manual-input-row">
+        <input
+          type="number"
+          id="manualYear"
+          class="input-field input-year"
+          placeholder="年号 例: 1192"
+        />
+        <input
+          type="text"
+          id="manualEvent"
+          class="input-field input-event"
+          placeholder="出来事 例: 鎌倉幕府成立"
+        />
+        <button class="btn btn-secondary" id="btnManualAdd" onclick="manualAdd()">追加</button>
+      </div>
+    </div>
+
+    <!-- データ保存・エクスポート -->
+    <div class="card">
+      <div class="data-stats">
+        <div class="card-title" style="margin:0">📚 保存データ</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <span class="data-count"><span id="dataCount">0</span> 件</span>
+          <button class="btn btn-danger" onclick="clearAllData()">すべて削除</button>
+        </div>
+      </div>
+      <div class="data-list" id="dataList">
+        <div class="empty-state">
+          <span class="empty-icon">📋</span>
+          画像をアップロードするか、手動で追加してください
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">
+        <button class="btn btn-secondary" style="flex:1; font-size:0.82rem;" onclick="exportData()">
+          💾 JSONでバックアップ
+        </button>
+        <label class="btn btn-secondary" style="flex:1; font-size:0.82rem; cursor:pointer;">
+          📂 JSONを読み込む
+          <input type="file" id="importInput" accept=".json" style="display:none" />
+        </label>
+      </div>
+    </div>
+
+    <!-- クイズ開始モード選択 -->
+    <div class="quiz-start-area">
+      <div class="card-title" style="margin-bottom:12px; justify-content:center;">🎯 クイズモードを選択</div>
+      <div style="display:grid; grid-template-columns: 1fr; gap:12px;">
+        <button class="btn btn-primary" id="btnStartMode1" onclick="startQuiz('yearToEvent')" disabled>
+          📅 年号 → 出来事
+        </button>
+        <button class="btn btn-primary" id="btnStartMode2" onclick="startQuiz('eventToYear')" disabled>
+          ⚔️ 出来事 → 年号
+        </button>
+        <button class="btn btn-secondary" id="btnStartMode3" onclick="startQuiz('random')" disabled>
+          🎲 完全ランダム
+        </button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ===================================================
+       クイズ画面
+  =================================================== -->
+  <section id="screen-quiz" class="screen">
+
+    <div class="quiz-header">
+      <span class="quiz-progress-text" id="quizProgressText">問題 1 / 10</span>
+      <span class="quiz-score" id="quizScoreText">正解: 0</span>
+    </div>
+    <div class="quiz-progress-bar-bg">
+      <div class="quiz-progress-bar-fill" id="quizProgressBar" style="width:0%"></div>
+    </div>
+
+    <div class="card" id="quizCard">
+      <span class="quiz-pattern-badge" id="quizPatternBadge">パターン</span>
+      <p class="quiz-question" id="quizQuestion"></p>
+
+      <div class="answer-area">
+        <label class="answer-label" id="answerLabel"></label>
+        <input
+          type="text"
+          class="answer-input"
+          id="answerInput"
+          placeholder=""
+          autocomplete="off"
+        />
+        <p class="answer-hint" id="answerHint"></p>
+      </div>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn btn-primary" id="btnAnswer" onclick="checkAnswer()">答える ✓</button>
+        <button class="btn btn-secondary" id="btnNext" onclick="nextQuestion()" style="display:none">
+          次の問題 →
+        </button>
+        <button class="btn btn-secondary" style="margin-left:auto" onclick="goHome()">
+          🏠 ホーム
+        </button>
+      </div>
+    </div>
+
+    <div id="resultArea" style="display:none"></div>
+
+  </section>
+
+  <!-- ===================================================
+       スコア・終了画面
+  =================================================== -->
+  <section id="screen-score" class="screen">
+
+    <div class="card" style="text-align:center; padding: 32px 24px;">
+      <div class="score-circle-wrap">
+        <div class="score-circle" id="scoreCircle">
+          <span class="score-number" id="scoreNumber">0%</span>
+        </div>
+        <p class="score-message" id="scoreMessage"></p>
+        <p class="score-text" id="scoreText"></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📝 問題一覧（復習）</div>
+      <div id="reviewList"></div>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+      <button class="btn btn-primary" style="flex:1" onclick="startQuiz(currentQuizMode)">もう一度 🔁</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="goHome()">🏠 ホームに戻る</button>
+    </div>
+
+  </section>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ライブラリ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
