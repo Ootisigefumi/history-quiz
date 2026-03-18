@@ -148,10 +148,11 @@ let score = 0;
 let reviewData = [];
 
 const QuizEngine = {
-  generate(data, mode, limit = 10) {
+  generate(data, mode, limit = 10, sourceData = null) {
     currentQuizMode = mode;
-    const shuffled = [...data].sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, Math.min(limit, data.length));
+    const baseData = sourceData || data;
+    const shuffled = [...baseData].sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, Math.min(limit, baseData.length));
     
     currentQuizList = selected.map(item => {
       let type;
@@ -345,6 +346,17 @@ function showScore() {
 
   const rList = document.getElementById('reviewList');
   rList.innerHTML = '';
+  const wrongData = reviewData.filter(r => !r.isCorrect);
+  
+  // 苦手克服アクションの表示切り替え
+  const wrongActions = document.getElementById('wrongActions');
+  if (wrongData.length > 0) {
+    wrongActions.style.display = 'block';
+    document.getElementById('wrongCount').textContent = wrongData.length;
+  } else {
+    wrongActions.style.display = 'none';
+  }
+
   reviewData.forEach(r => {
     const div = document.createElement('div');
     div.style.padding = '8px';
@@ -358,6 +370,30 @@ function showScore() {
     `;
     rList.appendChild(div);
   });
+}
+
+function startWrongOnlyQuiz() {
+  const wrongData = reviewData.filter(r => !r.isCorrect);
+  if (wrongData.length === 0) return;
+  // 出来事・年号それ自体の情報のみを抽出して新クイズに
+  const source = wrongData.map(w => ({ year: w.year, event: w.event }));
+  QuizEngine.generate(null, currentQuizMode, 20, source);
+  UIController.showScreen('screen-quiz');
+  UIController.renderQuestion();
+}
+
+function exportWrongData() {
+  const wrongData = reviewData.filter(r => !r.isCorrect).map(w => ({ year: w.year, event: w.event }));
+  if (wrongData.length === 0) return;
+  
+  const blob = new Blob([JSON.stringify(wrongData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `weak-points-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('💾 苦手リストを書き出しました');
 }
 
 function goHome() { UIController.showScreen('screen-home'); }
