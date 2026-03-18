@@ -1,0 +1,16 @@
+{
+  "name": "歴史年表クイズ",
+  "short_name": "歴史クイズ",
+  "description": "画像・PDFから自動でクイズを作成する学習アプリ",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d0d14",
+  "theme_color": "#0d0d14",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
