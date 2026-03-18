@@ -5,6 +5,7 @@
   "main": "index.html",
   "scripts": {
     "start": "npx serve . -p 3456",
+    "build": "echo 'No build step'",
     "cap:sync": "npx cap sync",
     "cap:ios": "npx cap open ios",
     "cap:android": "npx cap open android"
