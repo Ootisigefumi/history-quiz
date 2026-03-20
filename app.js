@@ -1,3 +1,5 @@
+'use strict';
+
 /* ================================================
    Supabase 初期化
 ================================================ */
@@ -6,13 +8,14 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 let sb = null;
 try {
-  if (typeof supabase === 'undefined') {
-    alert('❌ 重大なエラー: Supabaseライブラリを読み込めませんでした。ネット接続を確認するか、一度ブラウザを閉じて開き直してください。');
-  } else {
+  if (typeof supabase !== 'undefined') {
     sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log('Supabaseクライアントの初期化に成功しました。');
+  } else {
+    alert('❌ Supabaseのロードに失敗しました。リロードしてください。');
   }
-} catch (e) { console.error('Supabase初期化失敗:', e); }
+} catch (e) {
+  console.error('Supabase init error:', e);
+}
 
 let currentUser = null;
 let currentProfile = null;
@@ -21,7 +24,7 @@ let currentProfile = null;
    初期データ（100問）
 ================================================ */
 const INITIAL_DATA = [
-  {year:239,event:'邪馬台国の卑弥呼が魏に使いを送る'},{year:538,event:'百済から仏教が伝来する'},{year:593,event:'聖徳太子が推古天皇の摂政になる'},{year:607,event:'遣隋使として小野妹子を送る'},{year:645,event:'大化の改新で中大兄皇子、中臣鎌足が蘇我氏を倒す'},{year:672,event:'壬申の乱'},{year:701,event:'大宝律令'},{year:710,event:'元明天皇が平城京に遷都'},{year:723,event:'三世一身の法'},{year:743,event:'墾田永年私財法'},{year:794,event:'桓武天皇が平安京に遷都'},{year:894,event:'遣唐使廃止'},{year:939,event:'平将門の乱'},{year:939,event:'藤原純友の乱'},{year:1016,event:'藤原道長が摂政'},{year:1086,event:'白河上皇の院政開始'},{year:1156,event:'保元の乱'},{year:1159,event:'平治의乱'},{year:1167,event:'平清盛が太政大臣'},{year:1185,event:'壇ノ浦の戦い・守護地頭'},{year:1192,event:'源頼朝が征夷大将軍に任命された'},{year:1221,event:'後鳥羽上皇が承久の乱を起こした'},{year:1232,event:'北条泰時が御成敗式目を制定'},{year:1274,event:'文永の役'},{year:1281,event:'弘安の役'},{year:1333,event:'鎌倉幕府滅亡'},{year:1334,event:'後醍醐天皇の建武の新政'},{year:1338,event:'足利尊氏が室町幕府を開く'},{year:1392,event:'足利義満による南北朝統一'},{year:1428,event:'正長の土一揆'},{year:1467,event:'応仁の乱'},{year:1485,event:'山城の国一揆'},{year:1488,event:'加賀一向一揆'},{year:1543,event:'ポルトガル人が種子島に鉄砲伝来'},{year:1549,event:'キリスト教伝来'},{year:1573,event:'室町幕府滅亡'},{year:1575,event:'長篠の戦い'},{year:1582,event:'本能寺の変'},{year:1588,event:'刀狩'},{year:1590,event:'全国統一'},{year:1600,event:'関ヶ原の戦い'},{year:1603,event:'江戸幕府成立'},{year:1615,event:'武家諸法度'},{year:1635,event:'参勤交代'},{year:1637,event:'島原の乱'},{year:1639,event:'鎖国完成'},{year:1716,event:'享保の改革'},{year:1772,event:'田沼意次'},{year:1787,event:'寛政の改革'},{year:1825,event:'異国船打払令'},{year:1837,event:'大塩平八郎の乱'},{year:1841,event:'天保の改革'},{year:1853,event:'ペリー来航'},{year:1854,event:'日米和親条約'},{year:1858,event:'日米修好通商条約'},{year:1860,event:'桜田門外の変'},{year:1866,event:'薩長同盟'},{year:1867,event:'大政奉還'},{year:1868,event:'五箇条の御誓文'},{year:1871,event:'廃藩置県'},{year:1872,event:'学制発布'},{year:1873,event:'地租改正'},{year:1877,event:'西南戦争'},{year:1881,event:'自由民権運動'},{year:1885,event:'内閣制度'},{year:1889,event:'大日本帝国憲法'},{year:1890,event:'帝国議会'},{year:1894,event:'日清戦争'},{year:1895,event:'下関条約'},{year:1901,event:'八幡製鉄所'},{year:1902,event:'日英同盟'},{year:1904,event:'日露戦争'},{year:1905,event:'ポーツマス条約'},{year:1910,event:'韓国併合'},{year:1911,event:'関税自主権回復'},{year:1914,event:'第一次世界大戦'},{year:1915,event:'二十一か条の要求'},{year:1917,event:'ロシア革命'},{year:1918,event:'米騒動'},{year:1920,event:'国際連盟'},{year:1923,event:'関東大震災'},{year:1925,event:'普通選挙法・治安維持法'},{year:1929,event:'世界恐慌'},{year:1931,event:'満州事変'},{year:1932,event:'五・一五事件'},{year:1933,event:'国際連盟脱退'},{year:1936,event:'二・二六事件'},{year:1937,event:'日中戦争'},{year:1938,event:'国家総動員法'},{year:1939,event:'第二次世界大戦'},{year:1941,event:'太平洋戦争'},{year:1945,event:'終戦'},{year:1950,event:'朝鮮戦争'},{year:1951,event:'サンフランシスコ平和条約'},{year:1956,event:'国連加盟'},{year:1964,event:'東京オリンピック'},{year:1972,event:'沖縄返還'},{year:1978,event:'日中平和友好条約'},{year:1990,event:'東西ドイツ統一'},{year:1995,event:'阪神淡路大震災'},
+  {year:239,event:'邪馬台国の卑弥呼が魏に使いを送る'},{year:538,event:'百済から仏教が伝来する'},{year:593,event:'聖徳太子が推古天皇の摂政になる'},{year:607,event:'遣隋使として小野妹子を送る'},{year:645,event:'大化の改新'},{year:672,event:'壬申の乱'},{year:701,event:'大宝律令'},{year:710,event:'元明天皇が平城京に遷都'},{year:723,event:'三世一身の法'},{year:743,event:'墾田永年私財法'},{year:794,event:'桓武天皇が平安京に遷都'},{year:894,event:'遣唐使廃止'},{year:939,event:'平将門の乱'},{year:939,event:'藤原純友の乱'},{year:1016,event:'藤原道長が摂政'},{year:1086,event:'白河上皇の院政開始'},{year:1156,event:'保元の乱'},{year:1159,event:'平治の乱'},{year:1167,event:'平清盛が太政大臣'},{year:1185,event:'壇ノ浦の戦い・守護地頭'},{year:1192,event:'源頼朝が征夷大将軍'},{year:1221,event:'承久の乱'},{year:1232,event:'御成敗式目'},{year:1274,event:'文永の役'},{year:1281,event:'弘安の役'},{year:1333,event:'鎌倉幕府滅亡'},{year:1334,event:'建武の新政'},{year:1338,event:'足利尊氏が室町幕府を開く'},{year:1392,event:'南北朝統一'},{year:1428,event:'正長の土一揆'},{year:1467,event:'応仁の乱'},{year:1485,event:'山城の国一揆'},{year:1488,event:'加賀一向一揆'},{year:1543,event:'鉄砲伝来'},{year:1549,event:'キリスト教伝来'},{year:1573,event:'室町幕府滅亡'},{year:1575,event:'長篠の戦い'},{year:1582,event:'本能寺の変'},{year:1588,event:'刀狩'},{year:1590,event:'豊臣秀吉の全国統一'},{year:1600,event:'関ヶ原の戦い'},{year:1603,event:'江戸幕府成立'},{year:1615,event:'武家諸法度'},{year:1635,event:'参勤交代'},{year:1637,event:'島原の乱'},{year:1639,event:'鎖国完成'},{year:1716,event:'享保の改革'},{year:1772,event:'田沼意次の政治'},{year:1787,event:'寛政の改革'},{year:1825,event:'異国船打払令'},{year:1837,event:'大塩平八郎の乱'},{year:1841,event:'天保の改革'},{year:1853,event:'ペリー来航'},{year:1854,event:'日米和親条約'},{year:1858,event:'日米修好通商条約'},{year:1860,event:'桜田門外の変'},{year:1866,event:'薩長同盟'},{year:1867,event:'大政奉還'},{year:1868,event:'五箇条の御誓文'},{year:1871,event:'廃藩置県'},{year:1872,event:'学制発布'},{year:1873,event:'地租改正'},{year:1877,event:'西南戦争'},{year:1881,event:'国会期成同盟'},{year:1885,event:'内閣制度'},{year:1889,event:'大日本帝国憲法'},{year:1890,event:'第1回帝国議会'},{year:1894,event:'日清戦争'},{year:1895,event:'下関条約'},{year:1901,event:'八幡製鉄所'},{year:1902,event:'日英同盟'},{year:1904,event:'日露戦争'},{year:1905,event:'ポーツマス条約'},{year:1910,event:'韓国併合'},{year:1911,event:'関税自主権回復'},{year:1914,event:'第一次世界大戦'},{year:1915,event:'二十一か条の要求'},{year:1917,event:'ロシア革命'},{year:1918,event:'米騒動'},{year:1920,event:'国際連盟加入'},{year:1923,event:'関東大震災'},{year:1925,event:'普通選挙法・治安維持法'},{year:1929,event:'世界恐慌'},{year:1931,event:'満州事変'},{year:1932,event:'五・一五事件'},{year:1933,event:'国際連盟脱退'},{year:1936,event:'二・二六事件'},{year:1937,event:'日中戦争'},{year:1938,event:'国家総動員法'},{year:1939,event:'第二次世界大戦'},{year:1941,event:'太平洋戦争'},{year:1945,event:'終戦（ポツダム宣言受諾）'},{year:1950,event:'朝鮮戦争'},{year:1951,event:'サンフランシスコ平和条約'},{year:1956,event:'日ソ共同宣言・国連加盟'},{year:1964,event:'東京オリンピック'},{year:1972,event:'沖縄返還'},{year:1978,event:'日中平和友好条約'},{year:1990,event:'東西ドイツ統一'},{year:1995,event:'阪神淡路大震災'}
 ];
 
 const STAGE_COUNT = 10;
@@ -46,7 +49,12 @@ const RPG = {
   },
   xpToNext(lv) { return [50,150,300,500,800,1200,1800,2500,3500,9999][Math.min(lv-1,9)]; },
   xpBase(lv)   { return [0,50,150,300,500,800,1200,1800,2500,3500][Math.min(lv-1,9)]; },
-  enemies: [{name:'年号ゴブリン',emoji:'👹'},{name:'歴史スライム',emoji:'🟢'},{name:'時空龍',emoji:'🐉'},{name:'古文書の亡霊',emoji:'👻'},{name:'忘却の魔王',emoji:'😈'},{name:'暗黒騎士',emoji:'🦹'},{name:'年表ゴーレム',emoji:'🗿'},{name:'記憶の怪物',emoji:'🧟'}],
+  enemies: [
+    {name:'年号ゴブリン',emoji:'👹'},{name:'歴史スライム',emoji:'🟢'},
+    {name:'時空龍',emoji:'🐉'},{name:'古文書の亡霊',emoji:'👻'},
+    {name:'忘却の魔王',emoji:'😈'},{name:'暗黒騎士',emoji:'🦹'},
+    {name:'年表ゴーレム',emoji:'🗿'},{name:'記憶の怪物',emoji:'🧟'}
+  ],
   randomEnemy() { return this.enemies[Math.floor(Math.random()*this.enemies.length)]; },
   updateHeader() {
     if (!currentProfile) return;
@@ -62,10 +70,27 @@ const RPG = {
 };
 
 /* ================================================
-   Auth & Global Error
+   エラーハンドリング
 ================================================ */
-window.onerror = function(m, u, l) { showToast('❌ ' + m); return false; };
+window.onerror = function(msg, url, lineNo) {
+  showToast('❌ エラー: ' + msg);
+  return false;
+};
 
+function showCriticalError(err) {
+  console.error("Critical Error:", err);
+  document.body.innerHTML = `
+    <div style="background:#111; color:#f87171; padding:40px; height:100vh;">
+      <h2 style="color:#ffd764;">⚔️ 致命的なエラー</h2>
+      <pre style="background:#222; padding:16px; border-radius:8px; white-space:pre-wrap;">${err.message || err}</pre>
+      <button onclick="location.reload()" style="padding:12px 24px; background:#ffd764; border:none; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:20px;">リロードして再試行</button>
+    </div>
+  `;
+}
+
+/* ================================================
+   Auth 関連
+================================================ */
 function switchAuthTab(tab) {
   document.querySelectorAll('.auth-tab').forEach(b=>b.classList.remove('active'));
   document.getElementById('loginForm').style.display = tab==='login'?'block':'none';
@@ -76,219 +101,619 @@ function switchAuthTab(tab) {
 
 async function handleLogin(e) {
   e.preventDefault();
-  const b = document.getElementById('loginBtn'); const er = document.getElementById('authError');
-  b.disabled = true; b.textContent = '通信中...'; er.textContent = '';
+  if (!sb) { alert('Supabaseが初期化されていません。リロードしてください。'); return; }
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('authError');
+  btn.disabled = true; btn.textContent = '通信中...';
+  err.textContent = '';
+  
   try {
-    const em = document.getElementById('loginEmail').value.trim(); const pw = document.getElementById('loginPassword').value;
-    const t = new Promise((_, r) => setTimeout(() => r(new Error('タイムアウト')), 20000));
-    const { error } = await Promise.race([sb.auth.signInWithPassword({ email:em, password:pw }), t]);
-    if (error) { er.textContent = '失敗: ' + error.message; b.disabled = false; b.textContent = '冒険を始める'; }
-  } catch (ex) { er.textContent = ex.message; b.disabled = false; b.textContent = '冒険を始める'; }
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    
+    // タイムアウト設定
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('サーバーの応答がありません（タイムアウト）')), 15000));
+    
+    const { error } = await Promise.race([
+      sb.auth.signInWithPassword({ email, password }),
+      timeout
+    ]);
+    
+    if (error) {
+      err.style.color = 'var(--err)';
+      err.textContent = 'ログイン失敗: ' + (error.status === 400 ? 'メールアドレスまたはパスワードが正しくありません' : error.message);
+      btn.disabled = false; btn.textContent = '冒険を始める';
+    }
+  } catch (ex) {
+    err.style.color = 'var(--err)';
+    err.textContent = ex.message;
+    btn.disabled = false; btn.textContent = '冒険を始める';
+  }
 }
 
 async function handleSignup(e) {
   e.preventDefault();
-  const b = document.getElementById('signupBtn'); const er = document.getElementById('authError');
-  b.disabled = true; b.textContent = '登録中...';
+  if (!sb) return;
+  const btn = document.getElementById('signupBtn');
+  const err = document.getElementById('authError');
+  btn.disabled = true; btn.textContent = '登録中...';
+  err.textContent = '';
+
   try {
-    const { error } = await sb.auth.signUp({ email: document.getElementById('signupEmail').value.trim(), password: document.getElementById('signupPassword').value, options: { data: { display_name: document.getElementById('signupName').value.trim() } } });
-    if (error) { er.textContent = error.message; } else { er.textContent = '✅ 登録完了！ログインしてください。'; }
-  } catch (ex) { er.textContent = ex.message; }
-  b.disabled = false; b.textContent = '登録して冒険へ';
+    const name = document.getElementById('signupName').value.trim();
+    const email = document.getElementById('signupEmail').value.trim();
+    const password = document.getElementById('signupPassword').value;
+    
+    const { data, error } = await sb.auth.signUp({
+      email, password,
+      options: { data: { display_name: name } }
+    });
+    
+    if (error) {
+      err.style.color = 'var(--err)';
+      err.textContent = '登録失敗: ' + error.message;
+    } else {
+      err.style.color = 'var(--ok)';
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        err.textContent = '⚠️ すでに登録されています。ログインをお試しください。';
+      } else {
+        err.textContent = '✅ 登録完了！そのままログインをお試しください。';
+      }
+    }
+  } catch (ex) {
+    err.style.color = 'var(--err)';
+    err.textContent = ex.message;
+  }
+  btn.disabled = false; btn.textContent = '登録して冒険へ';
 }
 
-async function logout() { await sb.auth.signOut(); location.reload(); }
+async function logout() { 
+  if(sb) await sb.auth.signOut(); 
+  location.reload(); 
+}
 
 /* ================================================
-   Main lifecycle
+   ライフサイクル / データロード
 ================================================ */
 if (sb) {
-  sb.auth.onAuthStateChange(async (e, s) => {
-    if (s?.user) {
-      currentUser = s.user;
-      try { await loadProfile(); await loadData(); await loadStageProgress(); await loadRecords(); showScreen('screen-main'); }
-      catch (err) { showCriticalError(err); }
-    } else { currentUser = null; currentProfile = null; showScreen('screen-auth'); }
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (session?.user) {
+      currentUser = session.user;
+      try {
+        await loadProfile();
+        await loadData();
+        await loadStageProgress();
+        await loadRecords(); // ★ ここが前回欠けていてエラーになった
+        showScreen('screen-main');
+      } catch (err) {
+        showCriticalError(err);
+      }
+    } else {
+      currentUser = null;
+      currentProfile = null;
+      showScreen('screen-auth');
+    }
   });
 }
 
-function showCriticalError(err) {
-  document.body.innerHTML = `<div style="background:#111; color:#f87171; padding:40px; height:100vh;"><h2>ロードエラー</h2><pre>${err.message}</pre><button onclick="location.reload()">再試行</button></div>`;
-}
-
 async function loadProfile() {
-  const {data} = await sb.from('profiles').select('*').eq('id',currentUser.id).single();
-  if (data) currentProfile = data;
-  else {
-    const n = currentUser.user_metadata?.display_name || '冒険者';
-    const {data:np} = await sb.from('profiles').upsert({id:currentUser.id, display_name:n}).select().single();
-    currentProfile = np;
+  const {data} = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  if (data) {
+    currentProfile = data;
+  } else {
+    // 新規作成
+    const name = currentUser.user_metadata?.display_name || '冒険者';
+    const {data:np} = await sb.from('profiles').upsert({id: currentUser.id, display_name: name}).select().single();
+    currentProfile = np || {id: currentUser.id, display_name: name, xp: 0, level: 1};
   }
   RPG.updateHeader();
 }
 
-/* ================================================
-   Stage & Data
-================================================ */
-let stageProgress = {}, selectedMode = 'yearToEvent', localData = [];
-
+let stageProgress = {};
 async function loadStageProgress() {
   const {data} = await sb.from('stage_progress').select('*').eq('user_id', currentUser.id);
-  stageProgress = {}; if (data) data.forEach(r => stageProgress[r.stage] = r);
+  stageProgress = {};
+  if (data) data.forEach(r => stageProgress[r.stage] = r);
   renderStageGrid();
 }
 
 async function saveStageProgress(stage, score, total, isPerfect) {
   const p = stageProgress[stage];
-  const dat = { user_id: currentUser.id, stage, cleared: isPerfect || (p?.cleared || false), best_score: Math.max(p?.best_score || 0, score), attempts: (p?.attempts || 0) + 1 };
+  const dat = {
+    user_id: currentUser.id,
+    stage,
+    cleared: isPerfect || (p?.cleared || false),
+    best_score: Math.max(p?.best_score || 0, score),
+    attempts: (p?.attempts || 0) + 1,
+    updated_at: new Date().toISOString()
+  };
   await sb.from('stage_progress').upsert(dat, { onConflict: 'user_id,stage' });
-  stageProgress[stage] = dat; renderStageGrid();
+  stageProgress[stage] = dat;
+  renderStageGrid();
 }
 
 function renderStageGrid() {
-  const grid = document.getElementById('stageGrid'); if (!grid) return;
-  let unlocked = 1; for (let s = 1; s <= 10; s++) { if (stageProgress[s]?.cleared) unlocked = s + 1; else break; }
-  unlocked = Math.min(unlocked, 10); grid.innerHTML = '';
-  for (let s = 1; s <= 10; s++) {
-    const p = stageProgress[s]; const cl = p?.cleared; const isLocked = s > unlocked;
+  const grid = document.getElementById('stageGrid');
+  if (!grid) return;
+  // 最大開放ステージの計算
+  let unlocked = 1; 
+  for (let s = 1; s <= STAGE_COUNT; s++) {
+    if (stageProgress[s]?.cleared) unlocked = s + 1;
+    else break;
+  }
+  unlocked = Math.min(unlocked, STAGE_COUNT);
+  
+  grid.innerHTML = '';
+  for (let s = 1; s <= STAGE_COUNT; s++) {
+    const p = stageProgress[s];
+    const cl = p?.cleared;
+    const isLocked = s > unlocked;
+    const best = p?.best_score || 0;
+    
+    let stateClass = '';
+    if (cl) stateClass = 'cleared';
+    else if (isLocked) stateClass = 'locked';
+    else stateClass = 'available';
+    if (s === unlocked && !cl) stateClass += ' current';
+    
     const btn = document.createElement('button');
-    btn.className = `stage-btn ${cl ? 'cleared' : isLocked ? 'locked' : 'available'} ${s===unlocked && !cl ? 'current' : ''}`;
-    btn.innerHTML = `<span class="s-num">${s}</span><span class="s-era">${STAGE_LABELS[s-1]}</span><span class="s-stars">${cl ? '⭐⭐⭐' : isLocked ? '🔒' : '　'}</span>`;
+    btn.className = `stage-btn ${stateClass}`;
+    const stars = cl ? '⭐⭐⭐' : best >= 7 ? '⭐⭐' : best >= 5 ? '⭐' : isLocked ? '🔒' : '　';
+    const rangeStr = `${(s-1)*10+1}〜${s*10}`;
+    
+    btn.innerHTML = `
+      <span class="s-num">${s}</span>
+      <span class="s-era">${STAGE_LABELS[s-1]}</span>
+      <span style="font-size:.6rem;opacity:.7">${rangeStr}</span>
+      <span class="s-stars">${stars}</span>
+    `;
+    
     if (!isLocked) btn.onclick = () => startStageQuiz(s);
     grid.appendChild(btn);
   }
 }
 
+let localData = [];
 async function loadData() {
   const {data} = await sb.from('quiz_data').select('*').eq('user_id', currentUser.id).order('year');
-  if (data) localData = data; renderDataList();
+  localData = data || [];
+  renderDataList();
 }
 
 function renderDataList() {
   const list = document.getElementById('dataList');
   document.getElementById('dataCount').textContent = localData.length;
+  if (!localData.length) { 
+    list.innerHTML = '<div class="empty-st">カスタムデータなし</div>'; 
+    return; 
+  }
   list.innerHTML = '';
   localData.forEach(item => {
-    const d = document.createElement('div'); d.className = 'd-item';
-    d.innerHTML = `<span>${item.year}年: ${item.event}</span><button onclick="deleteEntry(${item.id})">✕</button>`;
+    const d = document.createElement('div');
+    d.className = 'd-item';
+    d.innerHTML = `<span>${item.year}年: ${item.event}</span><button class="d-del" onclick="deleteEntry(${item.id})">✕</button>`;
     list.appendChild(d);
   });
 }
 
+async function addEntry(year, event) {
+  const y = Number(year);
+  const e = String(event).trim();
+  if(!y || !e) return false;
+  if(localData.some(d => d.year === y && d.event === e)) return false;
+  const {data, error} = await sb.from('quiz_data').insert({user_id:currentUser.id, year:y, event:e}).select().single();
+  if(!error && data) { localData.push(data); return true; }
+  return false;
+}
+
 async function deleteEntry(id) {
-  await sb.from('quiz_data').delete().eq('id',id); localData = localData.filter(d => d.id !== id); renderDataList();
+  await sb.from('quiz_data').delete().eq('id',id).eq('user_id',currentUser.id);
+  localData = localData.filter(d => d.id !== id);
+  renderDataList();
+}
+
+async function clearAllData() {
+  if(!confirm('全てのカスタムデータを削除しますか？')) return;
+  await sb.from('quiz_data').delete().eq('user_id', currentUser.id);
+  localData = [];
+  renderDataList();
+  showToast('🗑️ 全て削除しました');
+}
+
+async function manualAdd() {
+  const y = document.getElementById('manualYear');
+  const e = document.getElementById('manualEvent');
+  const added = await addEntry(y.value, e.value);
+  if(added) { y.value=''; e.value=''; renderDataList(); showToast('📜 知識を記録しました'); }
+  else { showToast('⚠️ 追加できませんでした'); }
 }
 
 /* ================================================
    Quiz Engine
 ================================================ */
-let quizList, quizIndex, quizScore, reviewData, playerHP, maxHP = 5;
+let selectedMode = 'yearToEvent';
+function selectMode(m, el) {
+  selectedMode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+let quizList = [];
+let quizIndex = 0;
+let quizScore = 0;
+let reviewData = [];
+let playerHP = 5;
+let maxHP = 5;
 let currentStage = null;
+let curMode = 'yearToEvent';
 
 function startStageQuiz(stageNum) {
-  currentStage = stageNum; _buildQuiz(getStageItems(stageNum), selectedMode);
-  document.getElementById('battleLog').innerHTML = `<div>⚔️ ステージ${stageNum} 開始！</div>`;
-  showScreen('screen-battle'); renderQuestion();
+  currentStage = stageNum;
+  curMode = selectedMode;
+  const items = getStageItems(stageNum);
+  if(!items || items.length === 0) { showToast('ステージデータがありません'); return; }
+  _buildQuiz(items, selectedMode);
+  document.getElementById('battleLog').innerHTML = `<div>⚔️ ステージ${stageNum}「${STAGE_LABELS[stageNum-1]}」 開始！</div>`;
+  showScreen('screen-battle');
+  renderQuestion();
 }
 
 function startQuiz(mode) {
-  _buildQuiz(localData.length ? localData : INITIAL_DATA, mode);
+  const data = (localData && localData.length > 0) ? localData : INITIAL_DATA;
+  if(!data || data.length === 0) return;
+  currentStage = null;
+  curMode = mode;
+  _buildQuiz(data, mode);
   document.getElementById('battleLog').innerHTML = '<div>⚔️ クエスト開始！</div>';
-  showScreen('screen-battle'); renderQuestion();
+  showScreen('screen-battle');
+  renderQuestion();
 }
 
 function _buildQuiz(data, mode) {
-  quizList = [...data].sort(() => Math.random() - 0.5).slice(0, 10).map(i => ({...i, type: mode==='yearToEvent'?1 : mode==='eventToYear'?2 : (Math.random()>0.5?1:2)}));
-  quizIndex = 0; quizScore = 0; reviewData = []; playerHP = 5;
+  const shuffled = [...data].sort(() => Math.random() - 0.5).slice(0, 10);
+  quizList = shuffled.map(item => {
+    let type = mode === 'yearToEvent' ? 1 : mode === 'eventToYear' ? 2 : (Math.random() > 0.5 ? 1 : 2);
+    return { ...item, type, pattern: type === 1 ? '年号の試練' : '出来事の試練' };
+  });
+  quizIndex = 0; quizScore = 0; reviewData = []; playerHP = 5; maxHP = 5;
 }
 
 function renderQuestion() {
-  const q = quizList[quizIndex]; const enemy = RPG.randomEnemy();
-  document.getElementById('enemySprite').textContent = enemy.emoji;
-  document.getElementById('battleQ').innerHTML = q.type === 1 ? `${q.year}年 出来事は？` : `${q.event} 年号は？`;
-  const i = document.getElementById('battleInput'); i.type = q.type === 1 ? 'text' : 'number'; i.value = ''; i.disabled = false;
+  const q = quizList[quizIndex];
+  const enemy = RPG.randomEnemy();
+  const sp = document.getElementById('enemySprite');
+  sp.textContent = enemy.emoji; sp.className = 'enemy-sprite';
+  document.getElementById('enemyName').textContent = enemy.name;
+  document.getElementById('enemyHP').style.width = `${((quizList.length-quizIndex)/quizList.length)*100}%`;
+  
+  document.getElementById('battleBadge').textContent = currentStage ? `STAGE ${currentStage} - ${quizIndex+1}/10` : q.pattern;
+  
+  document.getElementById('battleQ').innerHTML = q.type === 1
+    ? `⚡ <span style="color:var(--gold);font-size:1.3em">${q.year}年</span> に何が起きた？`
+    : `⚡ <span style="color:var(--gold)">${q.event}</span> は何年？`;
+    
+  const input = document.getElementById('battleInput');
+  input.type = q.type === 1 ? 'text' : 'number';
+  input.placeholder = q.type === 1 ? '出来事を入力...' : '西暦数字...';
+  input.value = '';
+  input.disabled = false;
+  
   document.getElementById('btnAttack').style.display = 'inline-flex';
   document.getElementById('btnNext').style.display = 'none';
-  updatePlayerBar(); i.focus();
+  updatePlayerBar();
+  setTimeout(() => input.focus(), 100);
 }
 
 function updatePlayerBar() {
-  document.getElementById('playerHPBar').style.width = `${(playerHP/maxHP)*100}%`;
+  const pct = (playerHP / maxHP) * 100;
+  const fill = document.getElementById('playerHPBar');
+  fill.style.width = `${pct}%`;
+  fill.style.background = pct > 50 ? 'var(--green)' : pct > 25 ? 'orange' : 'var(--err)';
   document.getElementById('pbHP').textContent = `HP ${playerHP}/${maxHP}`;
 }
 
-function checkAnswer() {
-  const q = quizList[quizIndex]; const ua = document.getElementById('battleInput').value.trim();
-  let ok = false;
-  if (q.type === 1) {
-    const sim = calculateSimilarity(q.event, ua);
-    ok = (sim >= 0.6 || q.event.includes(ua));
-    addLog(ok ? (sim < 1 ? `✨ ほぼ正解: ${q.event}` : `✨ 正解: ${q.event}`) : `💥 違います: ${q.event}`, ok ? 'log-ok' : 'log-ng');
-  } else {
-    ok = (Number(ua) === q.year);
-    addLog(ok ? `✨ 正解: ${q.year}` : `💥 違います: ${q.year}`, ok ? 'log-ok' : 'log-ng');
-  }
-  if (ok) quizScore++; else playerHP--;
-  document.getElementById('battleInput').disabled = true;
-  document.getElementById('btnAttack').style.display = 'none';
-  document.getElementById('btnNext').style.display = 'inline-flex';
-  updatePlayerBar(); reviewData.push({ ...q, userAnswer: ua, isCorrect: ok });
-}
-
+// レーベンシュタイン距離による類似度計算
 function calculateSimilarity(s1, s2) {
   if (!s1 || !s2) return 0;
+  if(s1 === s2) return 1;
   const longer = s1.length > s2.length ? s1 : s2;
   const shorter = s1.length > s2.length ? s2 : s1;
-  const editDistance = (a, b) => {
-    const t = []; for (let i = 0; i <= a.length; i++) t[i] = [i]; for (let j = 0; j <= b.length; j++) t[0][j] = j;
-    for (let i = 1; i <= a.length; i++) {
-      for (let j = 1; j <= b.length; j++) t[i][j] = Math.min(t[i-1][j]+1, t[i][j-1]+1, t[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  
+  const editD = (a, b) => {
+    const t = [];
+    for (let i=0; i<=a.length; i++) t[i] = [i];
+    for (let j=0; j<=b.length; j++) t[0][j] = j;
+    for (let i=1; i<=a.length; i++) {
+      for (let j=1; j<=b.length; j++) {
+        t[i][j] = Math.min(t[i-1][j]+1, t[i][j-1]+1, t[i-1][j-1] + (a[i-1]===b[j-1]?0:1));
+      }
     }
     return t[a.length][b.length];
   };
-  return (longer.length - editDistance(longer, shorter)) / longer.length;
+  return (longer.length - editD(longer, shorter)) / longer.length;
+}
+
+// 差分ハイライト
+function generateDiffHtml(correct, input) {
+  let res = "";
+  const cArr = Array.from(correct);
+  const iSet = new Set(Array.from(input || ''));
+  cArr.forEach(char => {
+    if (iSet.has(char)) res += `<b style="color:var(--ok)">${char}</b>`;
+    else res += `<s style="color:var(--err); opacity:0.6">${char}</s>`;
+  });
+  return res;
+}
+
+function checkAnswer() {
+  const q = quizList[quizIndex];
+  const ua = document.getElementById('battleInput').value.trim();
+  let ok = false;
+  let diffH = "";
+  
+  if (q.type === 1) {
+    const sim = calculateSimilarity(q.event, ua);
+    ok = (sim >= 0.6 || (q.event.includes(ua) && ua.length >= 3));
+    diffH = generateDiffHtml(q.event, ua);
+  } else {
+    ok = (Number(ua) === q.year);
+  }
+  
+  document.getElementById('battleInput').disabled = true;
+  document.getElementById('btnAttack').style.display = 'none';
+  document.getElementById('btnNext').style.display = 'inline-flex';
+  
+  const sp = document.getElementById('enemySprite');
+  if (ok) {
+    quizScore++;
+    sp.classList.add('hit'); setTimeout(()=>sp.classList.remove('hit'), 400);
+    const sim = q.type === 1 ? calculateSimilarity(q.event, ua) : 1;
+    if (q.type === 1 && sim < 1) {
+      addLog(`✨ 惜しい、ほぼ正解！ ${q.year}: ${q.event}`, 'log-ok');
+      addLogHtml(`🔍 ${diffH}`);
+    } else {
+      addLog(`✨ 正解！ ${q.year}年: ${q.event}`, 'log-ok');
+    }
+  } else {
+    playerHP--;
+    document.querySelector('.player-bar').classList.add('shake');
+    setTimeout(()=>document.querySelector('.player-bar').classList.remove('shake'), 300);
+    addLog(`💥 不正解... 正解は ${q.year}年: ${q.event}`, 'log-ng');
+    if(q.type === 1 && ua.length > 0) addLogHtml(`🔍 ${diffH}`);
+    updatePlayerBar();
+  }
+  
+  reviewData.push({ ...q, userAnswer: ua, isCorrect: ok });
+}
+
+function nextQuestion() {
+  quizIndex++;
+  if (quizIndex < quizList.length && playerHP > 0) {
+    renderQuestion();
+  } else {
+    document.getElementById('enemySprite').classList.add('dead');
+    setTimeout(showResult, 700);
+  }
 }
 
 async function showResult() {
   showScreen('screen-result');
-  const xp = quizScore * 10;
-  await sb.from('profiles').update({xp: (currentProfile.xp || 0) + xp}).eq('id', currentUser.id);
-  if (currentStage) await saveStageProgress(currentStage, quizScore, 10, quizScore === 10);
+  const total = quizList.length;
+  const isPerfect = (quizScore === total);
+  const isDefeat = (playerHP <= 0);
+  
+  const xpGained = quizScore * 10 + (isPerfect ? 50 : 0) + (currentStage && isPerfect ? currentStage * 5 : 0);
+  
+  if (currentStage) await saveStageProgress(currentStage, quizScore, total, isPerfect);
+  
+  await saveRecord(curMode, quizScore, total, xpGained, isPerfect);
+  
+  const newXP = (currentProfile.xp || 0) + xpGained;
+  const oldLv = RPG.getLevel(currentProfile.xp || 0);
+  const newLv = RPG.getLevel(newXP);
+  await sb.from('profiles').update({xp: newXP, level: newLv, updated_at: new Date().toISOString()}).eq('id', currentUser.id);
+  currentProfile.xp = newXP;
+  RPG.updateHeader();
+  
+  const lvArea = document.getElementById('lvUpArea');
+  if (newLv > oldLv) {
+    lvArea.style.display = 'block';
+    document.getElementById('lvUpText').textContent = `🎉 LEVEL UP! → Lv.${newLv} ${RPG.getClass(newLv)}`;
+  } else {
+    lvArea.style.display = 'none';
+  }
+  
+  const icon = document.getElementById('rIcon');
+  const title = document.getElementById('rTitle');
+  const sub = document.getElementById('rSub');
+  
+  if (isPerfect) {
+    icon.textContent='🏆'; title.textContent='PERFECT!'; title.className='result-title win';
+    sub.textContent = currentStage ? `STAGE ${currentStage} 完全制覇！` : '全問正解！素晴らしい！';
+    confetti({particleCount:200,spread:80,colors:['#ffd764','#ffe99a','#fff','#c9a227']});
+    if(currentStage) setTimeout(showCert, 1500);
+  } else if (isDefeat) {
+    icon.textContent='💀'; title.textContent='DEFEAT...'; title.className='result-title lose';
+    sub.textContent='HPが尽きた...再挑戦しよう！';
+  } else {
+    icon.textContent='⚔️'; title.textContent='VICTORY!'; title.className='result-title win';
+    sub.textContent=`${Math.round((quizScore/total)*100)}% 達成！`;
+  }
+  
   document.getElementById('rsCorrect').textContent = quizScore;
-  document.getElementById('rsXP').textContent = `+${xp}`;
-  await loadRecords();
+  document.getElementById('rsWrong').textContent = total - quizScore;
+  document.getElementById('rsXP').textContent = `+${xpGained}`;
+  
+  const wp = document.getElementById('wrongPanel');
+  const wrs = reviewData.filter(r => !r.isCorrect);
+  if (wrs.length) { wp.style.display = 'block'; document.getElementById('wrongCount').textContent = wrs.length; }
+  else { wp.style.display = 'none'; }
+  
+  const rl = document.getElementById('reviewList');
+  rl.innerHTML = '';
+  reviewData.forEach(r => {
+    const d = document.createElement('div');
+    d.style.cssText = 'padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:.82rem';
+    d.innerHTML = `<div style="display:flex;justify-content:space-between"><span>${r.year}年: ${r.event}</span><span style="color:${r.isCorrect?'var(--ok)':'var(--err)'}">${r.isCorrect?'○':'×'}</span></div><div style="font-size:.7rem;color:var(--txt3)">回答: ${r.userAnswer||'未回答'}</div>`;
+    rl.appendChild(d);
+  });
+  
+  await loadRecords(); // 最後に記録一覧を更新
+}
+
+async function saveRecord(mode, score, total, xpEarned, isPerfect) {
+  await sb.from('quiz_records').insert({user_id: currentUser.id, mode, score, total, xp_earned: xpEarned, is_perfect: isPerfect});
 }
 
 async function loadRecords() {
-  const {data} = await sb.from('quiz_records').select('*').eq('user_id', currentUser.id).order('created_at', {ascending:false}).limit(10);
-  const list = document.getElementById('recordsList'); if (!list) return;
-  list.innerHTML = data?.length ? '' : '記録なし';
-  data?.forEach(r => {
-    const d = document.createElement('div'); d.className = 'rec-item';
-    d.innerHTML = `<span>${r.mode}</span><span>${r.score}/${r.total}</span>`;
-    list.appendChild(d);
+  const {data} = await sb.from('quiz_records').select('*').eq('user_id', currentUser.id).order('created_at', {ascending: false}).limit(20);
+  if (!data) return;
+  document.getElementById('statTotal').textContent = data.length;
+  document.getElementById('statPerfect').textContent = data.filter(r=>r.is_perfect).length;
+  document.getElementById('statTotalXP').textContent = data.reduce((s,r)=>s+(r.xp_earned||0),0);
+  
+  const l = document.getElementById('recordsList');
+  if(!data.length) { l.innerHTML = '<div class="empty-st">記録がありません</div>'; return; }
+  l.innerHTML = '';
+  const ml = {yearToEvent:'年号の試練', eventToYear:'出来事の試練', random:'混沌の迷宮'};
+  data.forEach(r => {
+    const d = new Date(r.created_at);
+    const dStr = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const pct = Math.round((r.score/r.total)*100);
+    const div = document.createElement('div'); div.className = 'rec-item';
+    div.innerHTML = `<div><span class="rec-mode">${ml[r.mode]||r.mode}</span>${r.is_perfect?'<span class="rec-perfect"> ✨満点</span>':''}<div class="rec-date">${dStr}</div></div><div style="text-align:right"><span class="rec-score ${pct===100?'rec-perfect':''}">${pct}%</span><div class="rec-date">+${r.xp_earned||0}XP</div></div>`;
+    l.appendChild(div);
   });
 }
 
+function retryWrong() {
+  const wd = reviewData.filter(r => !r.isCorrect).map(w => ({...w}));
+  if(!wd.length) return;
+  currentStage = null;
+  _buildQuiz(wd, curMode);
+  document.getElementById('battleLog').innerHTML = '<div>🔥 再戦！弱点克服！</div>';
+  showScreen('screen-battle');
+  renderQuestion();
+}
+
+/* ================================================
+   UI Utils / その他
+================================================ */
 function addLog(msg, type) {
-  const log = document.getElementById('battleLog'); const d = document.createElement('div'); d.className = type; d.textContent = msg;
+  const log = document.getElementById('battleLog');
+  const d = document.createElement('div');
+  d.className = type; d.textContent = msg;
+  log.appendChild(d); log.scrollTop = log.scrollHeight;
+}
+
+function addLogHtml(html) {
+  const log = document.getElementById('battleLog');
+  const d = document.createElement('div');
+  d.style.cssText = 'font-size:0.75rem; color:var(--txt3); margin-top:2px;';
+  d.innerHTML = html;
   log.appendChild(d); log.scrollTop = log.scrollHeight;
 }
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  document.getElementById(id).classList.add('active'); window.scrollTo(0,0);
 }
 function switchTab(t) {
   document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
   document.querySelector(`[data-tab="${t}"]`).classList.add('active');
   document.getElementById(`tab-${t}`).classList.add('active');
+  if(t === 'records') loadRecords();
 }
+function goHome() { showScreen('screen-main'); switchTab('quest'); }
 function showToast(m) {
   const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3000);
 }
+
+function showCert() {
+  const now = new Date();
+  document.getElementById('certName').textContent = `${currentProfile?.display_name||'冒険者'} 殿`;
+  const stg = currentStage ? `（STAGE ${currentStage}）` : '';
+  document.getElementById('certDate').textContent = `令和${now.getFullYear()-2018}年${now.getMonth()+1}月${now.getDate()}日 ${stg}`;
+  document.getElementById('certOverlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('certOverlay').classList.add('active'), 10);
+}
+function closeCert() {
+  document.getElementById('certOverlay').classList.remove('active');
+  setTimeout(() => document.getElementById('certOverlay').style.display = 'none', 300);
+}
+
+// ファイル解析周り
+const PDFProcessor = {
+  async toImageBlobs(file,onProgress){
+    const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+    const blobs=[]; const c=document.createElement('canvas'); const ctx=c.getContext('2d');
+    for(let i=1;i<=pdf.numPages;i++){
+      onProgress(i,pdf.numPages);
+      const pg=await pdf.getPage(i); const vp=pg.getViewport({scale:2});
+      c.width=vp.width; c.height=vp.height;
+      await pg.render({canvasContext:ctx,viewport:vp}).promise;
+      blobs.push(await new Promise(r=>c.toBlob(r,'image/png')));
+    }
+    return blobs;
+  },
+  isPDF(f){return f.type==='application/pdf'||f.name.endsWith('.pdf');}
+};
+
+async function processFiles(files) {
+  const wrap = document.getElementById('ocrWrap'), bar = document.getElementById('ocrBar'), txt = document.getElementById('ocrStatus');
+  wrap.classList.add('visible');
+  const blobs = [];
+  for(const f of files){
+    if(PDFProcessor.isPDF(f)) { const pb = await PDFProcessor.toImageBlobs(f, (p,t)=>txt.textContent=`PDF展開中 (${p}/${t})`); blobs.push(...pb); }
+    else blobs.push(f);
+  }
+  let worker = null;
+  try{
+    txt.textContent='OCR初期化中...'; worker=await Tesseract.createWorker(['jpn','eng']);
+    let added=0;
+    for(let i=0;i<blobs.length;i++){
+      bar.style.width=`${(i/blobs.length)*100}%`; txt.textContent=`解読中 (${i+1}/${blobs.length})`;
+      const {data:{text}}=await worker.recognize(blobs[i]);
+      for(const line of text.split(/\r?\n/)){
+        const m = line.match(/(\d{1,4})\s*[年\s]+(.{3,})/);
+        if(m){ const ok = await addEntry(parseInt(m[1]), m[2].replace(/^[年\s:：]+/,'').trim()); if(ok)added++; }
+      }
+    }
+    renderDataList(); showToast(added?`✅ ${added}件の知識を獲得！`:'📖 新しいデータは見つかりませんでした');
+  } finally {
+    if(worker) await worker.terminate();
+    wrap.classList.remove('visible'); bar.style.width='0%';
+  }
+}
+
+async function importData(e) {
+  const f = e.target.files?.[0]; if(!f) return;
+  try {
+    const arr = JSON.parse(await f.text());
+    let added = 0;
+    for(const i of arr) { const y = i.year||i.Year, ev = i.event||i.Event; if(y&&ev&&await addEntry(y,ev)) added++; }
+    renderDataList(); showToast(added ? `✅ ${added}件追加` : '⚠️ 新データなし');
+  } catch(err) { showToast('❌ 読込失敗'); }
+  e.target.value = '';
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(localData.map(d=>({year:d.year,event:d.event})),null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `history-quest.json`; a.click(); URL.revokeObjectURL(url);
+}
+function exportWrong() {
+  const wd = reviewData.filter(r=>!r.isCorrect).map(w=>({year:w.year,event:w.event}));
+  if(!wd.length) return;
+  const blob = new Blob([JSON.stringify(wd,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `weak-list.json`; a.click(); URL.revokeObjectURL(url);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('battleInput').addEventListener('keydown', e => { if(e.key === 'Enter') checkAnswer(); });
+  document.getElementById('fileInput').addEventListener('change', e => processFiles(Array.from(e.target.files)));
+  document.getElementById('importInput').addEventListener('change', importData);
+  document.getElementById('battleInput').addEventListener('keydown', e => {
+    if(e.key === 'Enter' && document.getElementById('btnAttack').style.display !== 'none') checkAnswer();
+  });
 });
