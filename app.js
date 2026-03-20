@@ -241,16 +241,42 @@ async function logout() {
    Main Init
 ================================================ */
 sb.auth.onAuthStateChange(async (event, session) => {
+  console.log('認証状態の変化:', event, session?.user?.id);
+  
   if (session?.user) {
     currentUser = session.user;
-    await loadProfile();
-    showScreen('screen-main');
-    await loadData();
-    await loadStageProgress();
-    loadRecords();
+    try {
+      console.log('プロファイル取得開始...');
+      await loadProfile();
+      console.log('データ取得開始...');
+      await loadData();
+      console.log('ステージ進捗取得開始...');
+      await loadStageProgress();
+      console.log('記録取得開始...');
+      await loadRecords();
+      
+      showScreen('screen-main');
+      console.log('全データのロード完了。メイン画面表示。');
+    } catch (err) {
+      console.error('ログイン後のデータロードに致命的なエラー:', err);
+      // 画面上に大きくエラーを表示
+      document.body.innerHTML = `
+        <div style="background:#111; color:#f87171; padding:40px; font-family:sans-serif; height:100vh;">
+          <h2 style="color:#ffd764; margin-bottom:16px;">⚔️ 歴史クエスト：重大なエラー</h2>
+          <p>ログインには成功しましたが、データの読み込みに失敗しました。</p>
+          <pre style="background:#222; padding:16px; border-radius:8px; overflow:auto; font-size:12px;">${err.stack || err.message}</pre>
+          <hr style="border-color:rgba(255,255,255,0.1); margin:24px 0;">
+          <p style="font-size:14px; color:#888;">解決方法：SupabaseのSQL Editorで、前にお送りしたテーブル作成用SQLを全て実行したか確認してください。</p>
+          <button onclick="location.reload()" style="padding:12px 24px; border-radius:8px; background:#ffd764; color:#1a1400; border:none; font-weight:900; cursor:pointer;">再試行</button>
+          <button onclick="supabase.createClient('${SUPABASE_URL}', '${SUPABASE_ANON_KEY}').auth.signOut()" style="margin-left:12px; padding:12px 24px; border-radius:8px; background:#444; color:#fff; border:none; cursor:pointer;">一度ログアウト</button>
+        </div>
+      `;
+    }
   } else {
-    currentUser = null; currentProfile = null;
+    currentUser = null;
+    currentProfile = null;
     showScreen('screen-auth');
+    console.log('未ログイン状態。ログイン画面表示。');
   }
 });
 
