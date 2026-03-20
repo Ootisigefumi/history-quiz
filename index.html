@@ -203,9 +203,38 @@
 
 </div>
 
+<!-- ===== 賞状オーバーレイ ===== -->
+<div id="certificateOverlay" class="certificate-overlay">
+  <div class="certificate-card">
+    <div class="cert-border">
+      <div class="cert-content">
+        <h2 class="cert-title">賞 状</h2>
+        <p class="cert-name">歴史学習者 殿</p>
+        <p class="cert-body">
+          あなたは「歴史年表クイズ」において<br>
+          すべての問題を正確に回答し<br>
+          極めて優秀な成績を収められました
+        </p>
+        <p class="cert-body">
+          よってここにその栄誉を称え<br>
+          満点合格を証します
+        </p>
+        <div class="cert-footer">
+          <p class="cert-date" id="certDate"></p>
+          <div class="cert-stamp">合 格</div>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:center; margin-top:20px;">
+      <button class="btn btn-primary" onclick="closeCertificate()">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- ライブラリ -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
   if (typeof pdfjsLib !== 'undefined') {

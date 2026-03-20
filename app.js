@@ -339,9 +339,31 @@ function nextQuestion() {
 function showScore() {
   UIController.showScreen('screen-score');
   const pct = Math.round((score / currentQuizList.length) * 100);
+  const scoreCircle = document.getElementById('scoreCircle');
+  
   document.getElementById('scoreNumber').textContent = `${pct}%`;
-  document.getElementById('scoreCircle').style.setProperty('--pct', pct);
-  document.getElementById('scoreMessage').textContent = pct === 100 ? '完璧です！' : 'お疲れ様でした！';
+  scoreCircle.style.setProperty('--pct', pct);
+  
+  const isPerfect = pct === 100;
+  if (isPerfect) {
+    scoreCircle.classList.add('perfect');
+    document.getElementById('scoreMessage').textContent = '✨ 満天おめでとう！ ✨';
+    
+    // 華やかな紙吹雪演出
+    confetti({
+      particleCount: 150,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#ffd764', '#ffe99a', '#ffffff', '#c9a227']
+    });
+
+    // 少し遅れて賞状を表示
+    setTimeout(showCertificate, 1500);
+  } else {
+    scoreCircle.classList.remove('perfect');
+    document.getElementById('scoreMessage').textContent = pct >= 80 ? '素晴らしい成績です！' : 'お疲れ様でした！';
+  }
+  
   document.getElementById('scoreText').textContent = `${currentQuizList.length}問中 ${score}問正解`;
 
   const rList = document.getElementById('reviewList');
@@ -370,6 +392,23 @@ function showScore() {
     `;
     rList.appendChild(div);
   });
+}
+
+function showCertificate() {
+  const overlay = document.getElementById('certificateOverlay');
+  const dateEl = document.getElementById('certDate');
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${now.getHours()}時${now.getMinutes()}分`;
+  
+  dateEl.textContent = `令和${now.getFullYear() - 2018}年 ${dateStr}`; // 簡易的な和暦表示
+  overlay.style.display = 'flex';
+  overlay.classList.add('active');
+}
+
+function closeCertificate() {
+  const overlay = document.getElementById('certificateOverlay');
+  overlay.classList.remove('active');
+  setTimeout(() => overlay.style.display = 'none', 400);
 }
 
 function startWrongOnlyQuiz() {
