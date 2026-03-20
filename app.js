@@ -7,21 +7,20 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 let sb = null;
 try {
   if (typeof supabase === 'undefined') {
-    console.error('Supabase library not loaded!');
-    alert('❌ Supabaseライブラリを読み込めませんでした。ネット接続を確認するか、リロードしてください。');
+    alert('❌ 重大なエラー: Supabaseライブラリを読み込めませんでした。ネット接続を確認するか、一度ブラウザを閉じて開き直してください。');
   } else {
     sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log('Supabase Client Initialized.');
+    console.log('Supabaseクライアントの初期化に成功しました。');
   }
 } catch (e) {
-  console.error('Supabase init error:', e);
+  console.error('Supabase初期化失敗:', e);
 }
 
 let currentUser = null;
 let currentProfile = null;
 
 /* ================================================
-   初期データ（100問・10ステージ）
+   初期データ（100問）
 ================================================ */
 const INITIAL_DATA = [
   {year:239,event:'邪馬台国の卑弥呼が魏に使いを送る'},
@@ -41,7 +40,7 @@ const INITIAL_DATA = [
   {year:1016,event:'藤原道長が摂政'},
   {year:1086,event:'白河上皇の院政開始'},
   {year:1156,event:'保元の乱'},
-  {year:1159,event:'平治の乱'},
+  {year:1159,event:'平治의乱'},
   {year:1167,event:'平清盛が太政大臣'},
   {year:1185,event:'壇ノ浦の戦い・守護地頭'},
   {year:1192,event:'源頼朝が征夷大将軍に任命された'},
@@ -128,15 +127,9 @@ const INITIAL_DATA = [
 
 const STAGE_COUNT = 10;
 const STAGE_SIZE = 10;
-
-// ステージごとの時代名
-const STAGE_LABELS = [
-  '古代①','古代②','中世①','中世②','中世③',
-  '近世①','近世②','近代①','近代②','現代'
-];
+const STAGE_LABELS = ['古代①','古代②','中世①','中世②','中世③','近世①','近世②','近代①','近代②','現代'];
 
 function getStageItems(stageNum) {
-  // stageNum: 1-indexed
   const start = (stageNum - 1) * STAGE_SIZE;
   return INITIAL_DATA.slice(start, start + STAGE_SIZE);
 }
@@ -175,8 +168,14 @@ const RPG = {
 };
 
 /* ================================================
-   Auth
+   Auth & Global Error Handling
 ================================================ */
+window.onerror = function(msg, url, lineNo, columnNo, error) {
+  console.error(`[JS Error] ${msg} at line ${lineNo}`);
+  showToast('❌ プログラム異常: ' + msg);
+  return false;
+};
+
 function switchAuthTab(tab) {
   document.querySelectorAll('.auth-tab').forEach(b=>b.classList.remove('active'));
   document.getElementById('loginForm').style.display = tab==='login'?'block':'none';
@@ -184,16 +183,10 @@ function switchAuthTab(tab) {
   document.querySelector(`.auth-tab:${tab==='login'?'first':'last'}-child`).classList.add('active');
   document.getElementById('authError').textContent = '';
 }
-// グローバルエラー捕捉
-window.onerror = function(msg, url, lineNo, columnNo, error) {
-  const errText = `[JS Error] ${msg} at line ${lineNo}`;
-  console.error(errText, error);
-  showToast('❌ プログラムエラー: ' + msg);
-  return false;
-};
 
 async function handleLogin(e) {
   e.preventDefault();
+  if (!sb) { alert('通信クライアントが初期化されていません。リロードしてください。'); return; }
   const btn = document.getElementById('loginBtn');
   const err = document.getElementById('authError');
   btn.disabled = true; btn.textContent = '通信中...';
@@ -203,38 +196,31 @@ async function handleLogin(e) {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
     
-    console.log('ログイン開始:', email);
-    
-    // 20秒でタイムアウトさせるPromise
+    // 30秒タイムアウト
     const timeout = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('通信タイムアウト：サーバーからの応答が遅れています。ネットワーク状況を確認するか、シークレットモードでお試しください。')), 20000)
+      setTimeout(() => reject(new Error('サーバーの応答がありません。ネットワーク設定（広告ブロックなど）を確認するか、シークレットモードでお試しください。')), 30000)
     );
 
-    // ログイン処理とタイムアウトの早い方を取る
     const { data, error } = await Promise.race([
       sb.auth.signInWithPassword({ email, password }),
       timeout
     ]);
     
     if (error) {
-      console.error('ログイン失敗:', error);
       err.style.color = 'var(--err)';
-      err.textContent = 'ログイン失敗: ' + (error.status === 400 ? 'パスワードまたはメールが違います' : error.message);
+      err.textContent = 'ログイン失敗: ' + (error.status === 400 ? 'メールかパスワードが違います' : error.message);
       btn.disabled = false; btn.textContent = '冒険を始める';
-    } else {
-      console.log('ログイン成功 OK!', data?.user?.id);
     }
   } catch (ex) {
-    console.error('ログイン例外:', ex);
     err.style.color = 'var(--err)';
-    err.textContent = ex.message || 'システムエラーが発生しました';
+    err.textContent = ex.message;
     btn.disabled = false; btn.textContent = '冒険を始める';
-    showToast('⚠️ 通信エラーが発生しました');
   }
 }
 
 async function handleSignup(e) {
   e.preventDefault();
+  if (!sb) { alert('通信クライアントが初期化されていません。'); return; }
   const btn = document.getElementById('signupBtn');
   const err = document.getElementById('authError');
   btn.disabled = true; btn.textContent = '登録中...';
@@ -245,106 +231,90 @@ async function handleSignup(e) {
     const email = document.getElementById('signupEmail').value.trim();
     const password = document.getElementById('signupPassword').value;
     
-    console.log('新規登録開始:', email);
     const { data, error } = await sb.auth.signUp({
       email, password,
       options: { data: { display_name: name } }
     });
     
     if (error) {
-      console.error('登録失敗:', error);
       err.style.color = 'var(--err)';
       err.textContent = '登録失敗: ' + error.message;
     } else {
-      console.log('登録完了 OK!', data);
       err.style.color = 'var(--ok)';
       if (data.user && data.user.identities && data.user.identities.length === 0) {
-        err.textContent = '⚠️ すでに登録されています。ログインへお進みください。';
+        err.textContent = '⚠️ 登録済みのようです。ログインしてください。';
       } else {
-        err.textContent = '✅ 登録完了！そのままログインしてみてください。';
+        err.textContent = '✅ 登録完了！そのままログインをお試しください。';
       }
     }
   } catch (ex) {
-    console.error('登録処理中に例外:', ex);
-    err.textContent = 'システムエラーが発生しました';
+    err.textContent = '登録時にエラーが発生しました。';
   }
   btn.disabled = false; btn.textContent = '登録して冒険へ';
 }
 
 async function logout() { 
-  try {
-    console.log('ログアウト開始');
-    await sb.auth.signOut(); 
-    location.reload();
-  } catch (ex) {
-    console.error('ログアウト失敗:', ex);
-  }
+  try { await sb.auth.signOut(); location.reload(); } catch (ex) {}
 }
 
 /* ================================================
-   Main Init
+   Main Lifecycle
 ================================================ */
-sb.auth.onAuthStateChange(async (event, session) => {
-  console.log('認証状態の変化:', event, session?.user?.id);
-  
-  if (session?.user) {
-    currentUser = session.user;
-    try {
-      console.log('プロファイル取得開始...');
-      await loadProfile();
-      console.log('データ取得開始...');
-      await loadData();
-      console.log('ステージ進捗取得開始...');
-      await loadStageProgress();
-      console.log('記録取得開始...');
-      await loadRecords();
-      
-      showScreen('screen-main');
-      console.log('全データのロード完了。メイン画面表示。');
-    } catch (err) {
-      console.error('ログイン後のデータロードに致命的なエラー:', err);
-      // 画面上に大きくエラーを表示
-      document.body.innerHTML = `
-        <div style="background:#111; color:#f87171; padding:40px; font-family:sans-serif; height:100vh;">
-          <h2 style="color:#ffd764; margin-bottom:16px;">⚔️ 歴史クエスト：重大なエラー</h2>
-          <p>ログインには成功しましたが、データの読み込みに失敗しました。</p>
-          <pre style="background:#222; padding:16px; border-radius:8px; overflow:auto; font-size:12px;">${err.stack || err.message}</pre>
-          <hr style="border-color:rgba(255,255,255,0.1); margin:24px 0;">
-          <p style="font-size:14px; color:#888;">解決方法：SupabaseのSQL Editorで、前にお送りしたテーブル作成用SQLを全て実行したか確認してください。</p>
-          <button onclick="location.reload()" style="padding:12px 24px; border-radius:8px; background:#ffd764; color:#1a1400; border:none; font-weight:900; cursor:pointer;">再試行</button>
-          <button onclick="supabase.createClient('${SUPABASE_URL}', '${SUPABASE_ANON_KEY}').auth.signOut()" style="margin-left:12px; padding:12px 24px; border-radius:8px; background:#444; color:#fff; border:none; cursor:pointer;">一度ログアウト</button>
-        </div>
-      `;
+if (sb) {
+  sb.auth.onAuthStateChange(async (event, session) => {
+    console.log('認証イベント:', event);
+    if (session?.user) {
+      currentUser = session.user;
+      try {
+        await loadProfile();
+        await loadData();
+        await loadStageProgress();
+        loadRecords();
+        showScreen('screen-main');
+      } catch (err) {
+        console.error('データロード失敗:', err);
+        showCriticalError(err);
+      }
+    } else {
+      currentUser = null;
+      currentProfile = null;
+      showScreen('screen-auth');
     }
-  } else {
-    currentUser = null;
-    currentProfile = null;
-    showScreen('screen-auth');
-    console.log('未ログイン状態。ログイン画面表示。');
-  }
-});
+  });
+}
+
+function showCriticalError(err) {
+  document.body.innerHTML = `
+    <div style="background:#111; color:#f87171; padding:40px; font-family:sans-serif; height:100vh;">
+      <h2 style="color:#ffd764;">⚔️ 歴史クエスト：ロードエラー</h2>
+      <pre style="background:#222; padding:16px; border-radius:8px;">${err.message}</pre>
+      <button onclick="location.reload()" style="padding:12px 24px; background:#ffd764; border:none; border-radius:8px; cursor:pointer;">再読み込み</button>
+    </div>
+  `;
+}
 
 async function loadProfile() {
   const {data} = await sb.from('profiles').select('*').eq('id',currentUser.id).single();
   if (data) { currentProfile = data; }
   else {
     const name = currentUser.user_metadata?.display_name || '冒険者';
-    const {data:np} = await sb.from('profiles').upsert({id:currentUser.id,display_name:name,xp:0,level:1},{onConflict:'id'}).select().single();
-    currentProfile = np || {id:currentUser.id,display_name:name,xp:0,level:1};
+    const {data:np} = await sb.from('profiles').upsert({id:currentUser.id,display_name:name,xp:0,level:1}).select().single();
+    currentProfile = np;
   }
   RPG.updateHeader();
 }
 
 /* ================================================
-   Stage Progress
+   Stage & Data Management
 ================================================ */
-let stageProgress = {}; // { 1: {cleared, best_score, attempts}, ... }
+let stageProgress = {};
 let selectedMode = 'yearToEvent';
+let localData = [];
 
 async function loadStageProgress() {
   const {data} = await sb.from('stage_progress').select('*').eq('user_id', currentUser.id);
   stageProgress = {};
-  if (data) { data.forEach(r => { stageProgress[r.stage] = r; }); }
+  if (data) data.forEach(r => { stageProgress[r.stage] = r; });
   renderStageGrid();
 }
 
@@ -353,26 +323,20 @@ async function saveStageProgress(stage, score, total, isPerfect) {
   const attempts = (prev?.attempts || 0) + 1;
   const bestScore = Math.max(prev?.best_score || 0, score);
   const cleared = isPerfect || (prev?.cleared || false);
-
   const payload = { user_id: currentUser.id, stage, cleared, best_score: bestScore, attempts, updated_at: new Date().toISOString() };
   await sb.from('stage_progress').upsert(payload, { onConflict: 'user_id,stage' });
   stageProgress[stage] = { ...payload };
   renderStageGrid();
 }
 
-function getUnlockedUpTo() {
-  let unlocked = 1;
-  for (let s = 1; s <= STAGE_COUNT; s++) {
-    if (stageProgress[s]?.cleared) unlocked = s + 1;
-    else break;
-  }
-  return Math.min(unlocked, STAGE_COUNT);
-}
-
 function renderStageGrid() {
   const grid = document.getElementById('stageGrid');
   if (!grid) return;
-  const unlockedUpTo = getUnlockedUpTo();
+  let unlockedUpTo = 1;
+  for (let s = 1; s <= STAGE_COUNT; s++) {
+    if (stageProgress[s]?.cleared) unlockedUpTo = s + 1; else break;
+  }
+  unlockedUpTo = Math.min(unlockedUpTo, STAGE_COUNT);
   grid.innerHTML = '';
   for (let s = 1; s <= STAGE_COUNT; s++) {
     const prog = stageProgress[s];
@@ -380,479 +344,186 @@ function renderStageGrid() {
     const best = prog?.best_score || 0;
     const isUnlocked = s <= unlockedUpTo;
     const isCurrent = s === unlockedUpTo && !cleared;
-
     const btn = document.createElement('button');
     btn.className = `stage-btn ${cleared ? 'cleared' : isUnlocked ? 'available' : 'locked'} ${isCurrent ? 'current' : ''}`;
-
-    const start = (s-1)*STAGE_SIZE + 1;
-    const end = s*STAGE_SIZE;
     const era = STAGE_LABELS[s-1];
     const stars = cleared ? '⭐⭐⭐' : best >= 7 ? '⭐⭐' : best >= 5 ? '⭐' : isUnlocked ? '　' : '🔒';
-
-    btn.innerHTML = `<span class="s-num">${s}</span><span class="s-era">${era}</span><span style="font-size:.6rem;color:inherit;opacity:.7">${start}〜${end}</span><span class="s-stars">${stars}</span>`;
-
-    if (isUnlocked) {
-      btn.onclick = () => startStageQuiz(s);
-    }
+    btn.innerHTML = `<span class="s-num">${s}</span><span class="s-era">${era}</span><span style="font-size:.6rem;opacity:.7">${(s-1)*10+1}〜${s*10}</span><span class="s-stars">${stars}</span>`;
+    if (isUnlocked) btn.onclick = () => startStageQuiz(s);
     grid.appendChild(btn);
   }
 }
 
-function selectMode(mode, el) {
-  selectedMode = mode;
-  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
-}
-
-/* ================================================
-   Data
-================================================ */
-let localData = [];
-
 async function loadData() {
-  // まずDBから取得
-  const {data, error} = await sb.from('quiz_data').select('*').eq('user_id', currentUser.id).order('year');
-  if (!error && data) { localData = data; }
+  const {data} = await sb.from('quiz_data').select('*').eq('user_id', currentUser.id).order('year');
+  if (data) localData = data;
   renderDataList();
-}
-
-async function addEntry(year, event) {
-  const y=Number(year); const e=String(event).trim();
-  if(!y||!e) return false;
-  if(localData.some(d=>d.year===y&&d.event===e)) return false;
-  const {data,error}=await sb.from('quiz_data').insert({user_id:currentUser.id,year:y,event:e}).select().single();
-  if(!error&&data){localData.push(data);return true;}
-  return false;
-}
-
-async function deleteEntry(id) {
-  await sb.from('quiz_data').delete().eq('id',id).eq('user_id',currentUser.id);
-  localData=localData.filter(d=>d.id!==id);
-  renderDataList();
-}
-
-async function clearAllData() {
-  if(!confirm('全カスタムデータを削除しますか？')) return;
-  await sb.from('quiz_data').delete().eq('user_id',currentUser.id);
-  localData=[]; renderDataList(); showToast('🗑️ 削除しました');
 }
 
 function renderDataList() {
-  const list=document.getElementById('dataList');
-  document.getElementById('dataCount').textContent=localData.length;
-  if(!localData.length){list.innerHTML='<div class="empty-st">カスタムデータなし（ステージモードは常に使えます）</div>';return;}
-  list.innerHTML='';
-  localData.forEach(item=>{
-    const d=document.createElement('div'); d.className='d-item';
-    d.innerHTML=`<span class="d-year">${item.year}年</span><span>${item.event}</span><button class="d-del" onclick="deleteEntry(${item.id})">✕</button>`;
+  const list = document.getElementById('dataList');
+  document.getElementById('dataCount').textContent = localData.length;
+  if (!localData.length) { list.innerHTML = '<div class="empty-st">カスタムデータなし</div>'; return; }
+  list.innerHTML = '';
+  localData.forEach(item => {
+    const d = document.createElement('div'); d.className = 'd-item';
+    d.innerHTML = `<span class="d-year">${item.year}年</span><span>${item.event}</span><button class="d-del" onclick="deleteEntry(${item.id})">✕</button>`;
     list.appendChild(d);
   });
 }
 
-async function manualAdd() {
-  const y=document.getElementById('manualYear'); const e=document.getElementById('manualEvent');
-  const added=await addEntry(y.value,e.value);
-  if(added){y.value='';e.value='';renderDataList();showToast('📜 知識を記録しました');}
-  else showToast('⚠️ 追加できませんでした（重複または不正）');
+async function addEntry(year, event) {
+  const {data, error} = await sb.from('quiz_data').insert({user_id:currentUser.id, year:Number(year), event:String(event).trim()}).select().single();
+  if (!error) { localData.push(data); return true; } return false;
 }
 
-function exportData() {
-  const blob=new Blob([JSON.stringify(localData.map(d=>({year:d.year,event:d.event})),null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`history-quest-${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url);
-  showToast('💾 バックアップしました');
-}
-
-async function importData(e) {
-  const file=e.target.files?.[0]; if(!file) return;
-  try{
-    const arr=JSON.parse(await file.text());
-    if(!Array.isArray(arr)) throw new Error('配列形式ではありません');
-    let added=0;
-    for(const it of arr){const y=it.year??it.Year,ev=it.event??it.Event;if(y&&ev&&await addEntry(y,ev))added++;}
-    renderDataList(); showToast(added?`✅ ${added}件追加`:'⚠️ 新しいデータなし');
-  }catch(err){showToast('❌ 読込失敗: '+err.message);}
-  e.target.value='';
-}
-
-/* ================================================
-   PDF / OCR
-================================================ */
-const PDFProcessor = {
-  async toImageBlobs(file,onProgress){
-    const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
-    const blobs=[]; const c=document.createElement('canvas'); const ctx=c.getContext('2d');
-    for(let i=1;i<=pdf.numPages;i++){
-      onProgress(i,pdf.numPages);
-      const pg=await pdf.getPage(i); const vp=pg.getViewport({scale:2});
-      c.width=vp.width; c.height=vp.height;
-      await pg.render({canvasContext:ctx,viewport:vp}).promise;
-      blobs.push(await new Promise(r=>c.toBlob(r,'image/png')));
-    }
-    return blobs;
-  },
-  isPDF(f){return f.type==='application/pdf'||f.name.endsWith('.pdf');}
-};
-
-async function processFiles(files) {
-  const wrap=document.getElementById('ocrWrap'); const bar=document.getElementById('ocrBar'); const txt=document.getElementById('ocrStatus');
-  wrap.classList.add('visible');
-  const blobs=[];
-  for(const f of files){
-    if(PDFProcessor.isPDF(f)){const pb=await PDFProcessor.toImageBlobs(f,(p,t)=>txt.textContent=`PDF展開中 (${p}/${t})`);blobs.push(...pb);}
-    else blobs.push(f);
-  }
-  let worker=null;
-  try{
-    txt.textContent='OCR初期化中...'; worker=await Tesseract.createWorker(['jpn','eng']);
-    let added=0;
-    for(let i=0;i<blobs.length;i++){
-      bar.style.width=`${(i/blobs.length)*100}%`; txt.textContent=`解読中 (${i+1}/${blobs.length})`;
-      const {data:{text}}=await worker.recognize(blobs[i]);
-      for(const line of text.split(/\r?\n/)){
-        const m=line.match(/(\d{1,4})\s*[年\s]+(.{3,})/);
-        if(m){const ok=await addEntry(parseInt(m[1]),m[2].replace(/^[年\s:：]+/,'').trim());if(ok)added++;}
-      }
-    }
-    renderDataList(); showToast(added?`✅ ${added}件の知識を獲得！`:'📖 新しいデータは見つかりませんでした');
-  }finally{if(worker)await worker.terminate();wrap.classList.remove('visible');bar.style.width='0%';}
+async function deleteEntry(id) {
+  await sb.from('quiz_data').delete().eq('id',id).eq('user_id',currentUser.id);
+  localData = localData.filter(d => d.id !== id); renderDataList();
 }
 
 /* ================================================
    Quiz Engine
 ================================================ */
-let curMode='yearToEvent', quizList=[], quizIndex=0, quizScore=0, reviewData=[], playerHP=5, maxHP=5;
-let currentStage = null; // ステージ番号（カスタムはnull）
+let curMode, quizList, quizIndex, quizScore, reviewData, playerHP, maxHP = 5;
+let currentStage = null;
 
 function startStageQuiz(stageNum) {
-  currentStage = stageNum;
-  curMode = selectedMode;
+  currentStage = stageNum; curMode = selectedMode;
   const items = getStageItems(stageNum);
-  if (!items || items.length === 0) {
-    showToast('⚠️ ステージデータが見つかりません');
-    return;
-  }
   _buildQuiz(items, selectedMode);
-  const stageName = STAGE_LABELS[stageNum - 1] || '未知の時代';
-  document.getElementById('battleLog').innerHTML = `<div>⚔️ ステージ${stageNum}「${stageName}」 バトル開始！</div>`;
-  showScreen('screen-battle');
-  renderQuestion();
+  document.getElementById('battleLog').innerHTML = `<div>⚔️ ステージ${stageNum} 開始！</div>`;
+  showScreen('screen-battle'); renderQuestion();
 }
 
 function startQuiz(mode) {
-  // カスタムデータがあれば使い、なければ初期データ（INITIAL_DATA）を確実に使う
   const data = (localData && localData.length > 0) ? localData : INITIAL_DATA;
-  if (!data || data.length === 0) {
-    showToast('⚠️ クイズデータがありません。データを追加するかリロードしてください。');
-    return;
-  }
-  currentStage = null;
-  curMode = mode;
+  currentStage = null; curMode = mode;
   _buildQuiz(data, mode);
-  document.getElementById('battleLog').innerHTML = '<div>⚔️ バトル開始！</div>';
-  showScreen('screen-battle');
-  renderQuestion();
+  document.getElementById('battleLog').innerHTML = '<div>⚔️ ギルドクエスト 開始！</div>';
+  showScreen('screen-battle'); renderQuestion();
 }
 
 function _buildQuiz(data, mode) {
-  // 最小でも1問、最大10問を抽出
-  const shuffled = [...data].sort(() => Math.random() - 0.5).slice(0, Math.min(10, data.length));
+  const shuffled = [...data].sort(() => Math.random() - 0.5).slice(0, 10);
   quizList = shuffled.map(item => {
-    // modeが'random'の場合は1（年号→出来事）か2（出来事→年号）をランダムに
-    let type = mode === 'yearToEvent' ? 1 : mode === 'eventToYear' ? 2 : (Math.random() > 0.5 ? 1 : 2);
-    return { ...item, type, pattern: type === 1 ? '年号の試練' : '出来事の試練' };
+    const type = mode === 'yearToEvent' ? 1 : mode === 'eventToYear' ? 2 : (Math.random() > 0.5 ? 1 : 2);
+    return { ...item, type };
   });
-  quizIndex = 0;
-  quizScore = 0;
-  reviewData = [];
-  playerHP = 5;
-  maxHP = 5;
+  quizIndex = 0; quizScore = 0; reviewData = []; playerHP = 5;
 }
 
 function renderQuestion() {
-  const q=quizList[quizIndex];
-  const enemy=RPG.randomEnemy();
-  const sp=document.getElementById('enemySprite');
-  sp.textContent=enemy.emoji; sp.className='enemy-sprite';
-  document.getElementById('enemyName').textContent=enemy.name;
-  document.getElementById('enemyHP').style.width=`${((quizList.length-quizIndex)/quizList.length)*100}%`;
-  document.getElementById('battleBadge').textContent=
-    currentStage ? `ステージ${currentStage}「${STAGE_LABELS[currentStage-1]}」 ${quizIndex+1}/${quizList.length}` : q.pattern;
-  document.getElementById('battleQ').innerHTML=q.type===1
-    ?`⚡ <span style="color:var(--gold);font-size:1.3em">${q.year}年</span> に何が起きた？`
-    :`⚡ <span style="color:var(--gold)">${q.event}</span> は何年？`;
-  const input=document.getElementById('battleInput');
-  input.type=q.type===1?'text':'number'; input.placeholder=q.type===1?'出来事を入力...':'西暦（数字）を入力...';
-  input.value=''; input.disabled=false;
-  document.getElementById('btnAttack').style.display='inline-flex';
-  document.getElementById('btnNext').style.display='none';
-  updatePlayerBar(); setTimeout(()=>input.focus(),100);
+  const q = quizList[quizIndex];
+  const enemy = RPG.randomEnemy();
+  document.getElementById('enemySprite').textContent = enemy.emoji;
+  document.getElementById('enemyName').textContent = enemy.name;
+  document.getElementById('enemyHP').style.width = `${((quizList.length-quizIndex)/quizList.length)*100}%`;
+  document.getElementById('battleQ').innerHTML = q.type === 1 ? `${q.year}年 に何が起きた？` : `${q.event} は何年？`;
+  const input = document.getElementById('battleInput');
+  input.type = q.type === 1 ? 'text' : 'number'; input.value = ''; input.disabled = false;
+  document.getElementById('btnAttack').style.display = 'inline-flex';
+  document.getElementById('btnNext').style.display = 'none';
+  updatePlayerBar(); input.focus();
 }
 
 function updatePlayerBar() {
-  const pct=(playerHP/maxHP)*100;
-  const fill=document.getElementById('playerHPBar');
-  fill.style.width=`${pct}%`; fill.style.background=pct>50?'var(--green)':pct>25?'orange':'var(--err)';
-  document.getElementById('pbHP').textContent=`HP ${playerHP}/${maxHP}`;
-}
-
-function addLog(msg,type) {
-  const log=document.getElementById('battleLog'); const d=document.createElement('div'); d.className=type; d.textContent=msg;
-  log.appendChild(d); log.scrollTop=log.scrollHeight;
+  document.getElementById('playerHPBar').style.width = `${(playerHP/maxHP)*100}%`;
+  document.getElementById('pbHP').textContent = `HP ${playerHP}/${maxHP}`;
 }
 
 function checkAnswer() {
   const q = quizList[quizIndex];
   const ua = document.getElementById('battleInput').value.trim();
   let isOk = false;
-  let diffInfo = "";
-
+  
   if (q.type === 1) {
-    // 【年号→出来事：あいまい判定】
-    const similarity = calculateSimilarity(q.event, ua);
-    // 60%以上一致、または直接含まれていれば正解
-    if (similarity >= 0.6 || (q.event.includes(ua) && ua.length >= 3)) {
-      isOk = true;
+    const sim = calculateSimilarity(q.event, ua);
+    isOk = (sim >= 0.6 || (q.event.includes(ua) && ua.length >= 3));
+    if (isOk) {
+      quizScore++; 
+      addLog(sim < 1 ? `✨ ほぼ正解！: ${q.event}` : `✨ 正解！: ${q.event}`, 'log-ok');
+    } else {
+      playerHP--; addLog(`💥 不正解... 正解は ${q.event}`, 'log-ng');
     }
-    // 差分情報の作成
-    diffInfo = generateDiffHtml(q.event, ua);
   } else {
-    // 【出来事→年号：完全一致（数字なので）】
     isOk = (Number(ua) === q.year);
+    if (isOk) { quizScore++; addLog(`✨ 正解！${q.year}年`, 'log-ok'); }
+    else { playerHP--; addLog(`💥 不正解... 正解は${q.year}年`, 'log-ng'); }
   }
-
+  
   document.getElementById('battleInput').disabled = true;
   document.getElementById('btnAttack').style.display = 'none';
   document.getElementById('btnNext').style.display = 'inline-flex';
-  
-  const sp = document.getElementById('enemySprite');
-  
-  if (isOk) {
-    quizScore++;
-    sp.classList.add('hit');
-    setTimeout(() => sp.classList.remove('hit'), 400);
-    
-    const sim = q.type === 1 ? calculateSimilarity(q.event, ua) : 1;
-    if (sim < 1 && q.type === 1) {
-      addLog(`✨ 惜しい！ほぼ正解！ ${q.year}年: ${q.event}`, 'log-ok');
-      addLogHtml(`🔍 差分: ${diffInfo}`);
-    } else {
-      addLog(`✨ 正解！${q.year}年: ${q.event}`, 'log-ok');
-    }
-  } else {
-    playerHP--;
-    const pb = document.querySelector('.player-bar');
-    pb.classList.add('shake');
-    setTimeout(() => pb.classList.remove('shake'), 300);
-    
-    addLog(`💥 不正解... 正解は ${q.year}年: ${q.event}`, 'log-ng');
-    if (q.type === 1 && ua.length > 0) {
-      addLogHtml(`🔍 差分: ${diffInfo}`);
-    }
-    updatePlayerBar();
-  }
-  
+  updatePlayerBar();
   reviewData.push({ ...q, userAnswer: ua, isCorrect: isOk });
-}
-
-// 類似度の計算 (レーベンシュタイン距離)
-function calculateSimilarity(s1, s2) {
-  if (!s1 || !s2) return 0;
-  if (s1 === s2) return 1;
-  const longer = s1.length > s2.length ? s1 : s2;
-  const shorter = s1.length > s2.length ? s2 : s1;
-  const longerLength = longer.length;
-  if (longerLength === 0) return 1.0;
-  
-  const editDistance = (a, b) => {
-    const tmp = [];
-    for (let i = 0; i <= a.length; i++) tmp[i] = [i];
-    for (let j = 0; j <= b.length; j++) tmp[0][j] = j;
-    for (let i = 1; i <= a.length; i++) {
-      for (let j = 1; j <= b.length; j++) {
-        tmp[i][j] = Math.min(tmp[i - 1][j] + 1, tmp[i][j - 1] + 1, tmp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
-      }
-    }
-    return tmp[a.length][b.length];
-  };
-
-  return (longerLength - editDistance(longer, shorter)) / longerLength;
-}
-
-// 差分をHTMLで表示する
-function generateDiffHtml(correct, input) {
-  let result = "";
-  const correctArr = Array.from(correct);
-  const inputSet = new Set(Array.from(input));
-  correctArr.forEach(char => {
-    if (inputSet.has(char)) {
-      result += `<b style="color:#4ade80">${char}</b>`;
-    } else {
-      result += `<s style="color:#f87171; opacity:0.6">${char}</s>`;
-    }
-  });
-  return result;
-}
-
-function addLogHtml(html) {
-  const log = document.getElementById('battleLog');
-  const d = document.createElement('div');
-  d.style.cssText = 'font-size:0.75rem; margin-top:2px; color:var(--txt3); border-left: 2px solid var(--border); padding-left: 8px;';
-  d.innerHTML = html;
-  log.appendChild(d);
-  log.scrollTop = log.scrollHeight;
 }
 
 function nextQuestion() {
   quizIndex++;
-  if(quizIndex<quizList.length&&playerHP>0){renderQuestion();}
-  else{document.getElementById('enemySprite').classList.add('dead');setTimeout(showResult,700);}
+  if (quizIndex < quizList.length && playerHP > 0) renderQuestion();
+  else showResult();
 }
 
-/* ================================================
-   Records
-================================================ */
-async function saveRecord(mode, score, total, xpEarned, isPerfect) {
-  await sb.from('quiz_records').insert({user_id:currentUser.id,mode,score,total,xp_earned:xpEarned,is_perfect:isPerfect});
+function calculateSimilarity(s1, s2) {
+  if (!s1 || !s2) return 0;
+  const longer = s1.length > s2.length ? s1 : s2;
+  const shorter = s1.length > s2.length ? s2 : s1;
+  const editDistance = (a, b) => {
+    const t = [];
+    for (let i = 0; i <= a.length; i++) t[i] = [i];
+    for (let j = 0; j <= b.length; j++) t[0][j] = j;
+    for (let i = 1; i <= a.length; i++) {
+      for (let j = 1; j <= b.length; j++) t[i][j] = Math.min(t[i-1][j]+1, t[i][j-1]+1, t[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+    }
+    return t[a.length][b.length];
+  };
+  return (longer.length - editDistance(longer, shorter)) / longer.length;
 }
 
-async function loadRecords() {
-  const {data}=await sb.from('quiz_records').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(20);
-  if(!data)return;
-  document.getElementById('statTotal').textContent=data.length;
-  document.getElementById('statPerfect').textContent=data.filter(r=>r.is_perfect).length;
-  document.getElementById('statTotalXP').textContent=data.reduce((s,r)=>s+(r.xp_earned||0),0);
-  const list=document.getElementById('recordsList'); list.innerHTML='';
-  if(!data.length){list.innerHTML='<div class="empty-st">まだ記録がありません</div>';return;}
-  data.forEach(r=>{
-    const pct=Math.round((r.score/r.total)*100);
-    const d=new Date(r.created_at); const dateStr=`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
-    const ml={yearToEvent:'年号の試練',eventToYear:'出来事の試練',random:'混沌の迷宮'};
-    const div=document.createElement('div'); div.className='rec-item';
-    div.innerHTML=`<div><span class="rec-mode">${ml[r.mode]||r.mode}</span>${r.is_perfect?'<span class="rec-perfect"> ✨満点</span>':''}<div class="rec-date">${dateStr}</div></div><div style="text-align:right"><span class="rec-score ${pct===100?'rec-perfect':''}">${pct}%</span><div class="rec-date">+${r.xp_earned||0}XP</div></div>`;
-    list.appendChild(div);
-  });
-}
-
-/* ================================================
-   Result
-================================================ */
 async function showResult() {
   showScreen('screen-result');
-  const total=quizList.length; const isPerfect=quizScore===total; const isDefeat=playerHP<=0;
-  const xpGained=quizScore*10+(isPerfect?50:0)+(currentStage&&isPerfect?currentStage*5:0);
-
-  // ステージ進捗を保存
-  if (currentStage) { await saveStageProgress(currentStage, quizScore, total, isPerfect); }
-
-  // XP保存
-  const newXP=(currentProfile.xp||0)+xpGained;
-  const oldLv=RPG.getLevel(currentProfile.xp||0); const newLv=RPG.getLevel(newXP); const lvUp=newLv>oldLv;
-  await sb.from('profiles').update({xp:newXP,level:newLv,updated_at:new Date().toISOString()}).eq('id',currentUser.id);
-  currentProfile.xp=newXP; currentProfile.level=newLv; RPG.updateHeader();
-  await saveRecord(curMode,quizScore,total,xpGained,isPerfect);
-  loadRecords();
-
-  const icon=document.getElementById('rIcon'); const title=document.getElementById('rTitle'); const sub=document.getElementById('rSub');
-  if(isPerfect){
-    icon.textContent='🏆'; title.textContent='PERFECT!'; title.className='result-title win';
-    const stageName = currentStage ? `ステージ${currentStage}「${STAGE_LABELS[currentStage-1]}」` : 'クエスト';
-    sub.textContent=`${stageName} 全問正解！伝説の勇者！`;
-    confetti({particleCount:200,spread:80,colors:['#ffd764','#ffe99a','#fff','#c9a227']});
-    setTimeout(()=>confetti({particleCount:80,spread:60,origin:{x:.2,y:.6}}),500);
-    setTimeout(()=>confetti({particleCount:80,spread:60,origin:{x:.8,y:.6}}),1000);
-    setTimeout(showCert,2000);
-  } else if(isDefeat){
-    icon.textContent='💀'; title.textContent='DEFEAT...'; title.className='result-title lose';
-    sub.textContent='HPが尽きた...もう一度挑もう！';
-  } else {
-    icon.textContent='⚔️'; title.textContent='VICTORY!'; title.className='result-title win';
-    sub.textContent=`${Math.round((quizScore/total)*100)}% — 満点で次のステージへ！`;
-  }
-
-  // ステージ解放通知
-  if (currentStage && isPerfect && currentStage < STAGE_COUNT) {
-    const nextStage = currentStage + 1;
-    setTimeout(()=>showToast(`🎉 ステージ${nextStage}「${STAGE_LABELS[nextStage-1]}」が解放されました！`), 1000);
-  }
-
-  document.getElementById('rsCorrect').textContent=quizScore;
-  document.getElementById('rsWrong').textContent=total-quizScore;
-  document.getElementById('rsXP').textContent=`+${xpGained}`;
-  const lvArea=document.getElementById('lvUpArea');
-  if(lvUp){lvArea.style.display='block';document.getElementById('lvUpText').textContent=`🎉 LEVEL UP! → Lv.${newLv} ${RPG.getClass(newLv)}`;}
-  else lvArea.style.display='none';
-
-  const wrongPanel=document.getElementById('wrongPanel');
-  const wrongItems=reviewData.filter(r=>!r.isCorrect);
-  if(wrongItems.length){wrongPanel.style.display='block';document.getElementById('wrongCount').textContent=wrongItems.length;}
-  else wrongPanel.style.display='none';
-
-  const rList=document.getElementById('reviewList'); rList.innerHTML='';
-  reviewData.forEach(r=>{
-    const d=document.createElement('div');
-    d.style.cssText='padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:.82rem';
-    d.innerHTML=`<div style="display:flex;justify-content:space-between"><span>${r.year}年: ${r.event}</span><span style="color:${r.isCorrect?'var(--ok)':'var(--err)'}">${r.isCorrect?'○':'×'}</span></div><div style="font-size:.7rem;color:var(--txt3)">回答: ${r.userAnswer||'未回答'}</div>`;
+  const xp = quizScore * 10 + (quizScore === 10 ? 50 : 0);
+  const newXP = (currentProfile.xp || 0) + xp;
+  await sb.from('profiles').update({xp: newXP}).eq('id', currentUser.id);
+  currentProfile.xp = newXP; RPG.updateHeader();
+  
+  document.getElementById('rsCorrect').textContent = quizScore;
+  document.getElementById('rsXP').textContent = `+${xp}`;
+  const rList = document.getElementById('reviewList'); rList.innerHTML = '';
+  reviewData.forEach(r => {
+    const d = document.createElement('div');
+    d.innerHTML = `${r.year}年: ${r.event} (${r.isCorrect?'○':'×'})`;
     rList.appendChild(d);
   });
 }
 
-function retryWrong() {
-  const wd=reviewData.filter(r=>!r.isCorrect).map(w=>({...w}));
-  if(!wd.length)return;
-  currentStage=null; // 再戦はステージ記録しない
-  _buildQuiz(wd,curMode);
-  document.getElementById('battleLog').innerHTML='<div>🔥 再戦！弱点克服！</div>';
-  showScreen('screen-battle'); renderQuestion();
-}
-
-function exportWrong() {
-  const wd=reviewData.filter(r=>!r.isCorrect).map(w=>({year:w.year,event:w.event}));
-  if(!wd.length)return;
-  const blob=new Blob([JSON.stringify(wd,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`weak-${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url);
-  showToast('💾 弱点リストを保存しました');
+function addLog(msg, type) {
+  const log = document.getElementById('battleLog');
+  const d = document.createElement('div'); d.className = type; d.textContent = msg;
+  log.appendChild(d); log.scrollTop = log.scrollHeight;
 }
 
 /* ================================================
-   Certificate
-================================================ */
-function showCert() {
-  const now=new Date();
-  document.getElementById('certName').textContent=`${currentProfile?.display_name||'冒険者'} 殿`;
-  const stageLabel = currentStage ? `（ステージ${currentStage}「${STAGE_LABELS[currentStage-1]}」）` : '';
-  document.getElementById('certDate').textContent=`令和${now.getFullYear()-2018}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours()}時${now.getMinutes()}分 ${stageLabel}`;
-  const o=document.getElementById('certOverlay'); o.style.display='flex'; o.classList.add('active');
-}
-function closeCert() {
-  const o=document.getElementById('certOverlay'); o.classList.remove('active'); setTimeout(()=>o.style.display='none',400);
-}
-
-/* ================================================
-   UI helpers
+   UI Utils
 ================================================ */
 function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active'); window.scrollTo(0,0);
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
 }
 function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
   document.getElementById(`tab-${tab}`).classList.add('active');
-  if(tab==='records')loadRecords();
 }
-function goHome() { showScreen('screen-main'); switchTab('quest'); }
 function showToast(msg) {
-  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500);
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-/* ================================================
-   Init
-================================================ */
-document.addEventListener('DOMContentLoaded', ()=>{
-  document.getElementById('fileInput').addEventListener('change',e=>processFiles(Array.from(e.target.files)));
-  document.getElementById('importInput').addEventListener('change',importData);
-  document.getElementById('battleInput').addEventListener('keydown',e=>{
-    if(e.key==='Enter'&&document.getElementById('btnAttack').style.display!=='none')checkAnswer();
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('battleInput').addEventListener('keydown', e => {
+    if(e.key === 'Enter') checkAnswer();
   });
 });
