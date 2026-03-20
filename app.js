@@ -176,20 +176,66 @@ function switchAuthTab(tab) {
 }
 async function handleLogin(e) {
   e.preventDefault();
-  const btn=document.getElementById('loginBtn'); btn.disabled=true; btn.textContent='接続中...';
-  const {error}=await sb.auth.signInWithPassword({email:document.getElementById('loginEmail').value,password:document.getElementById('loginPassword').value});
-  if(error){document.getElementById('authError').textContent='ログイン失敗: '+error.message;btn.disabled=false;btn.textContent='冒険を始める';}
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('authError');
+  btn.disabled = true; btn.textContent = '接続中...';
+  err.textContent = '';
+  
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  
+  console.log('ログイン試行:', email);
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  
+  if (error) {
+    console.error('ログインエラー:', error);
+    err.style.color = 'var(--err)';
+    // 400エラーはパスワード間違い、それ以外はシステムエラーの可能性
+    err.textContent = 'ログイン失敗: ' + (error.status === 400 ? 'メールアドレスまたはパスワードが違います' : error.message);
+    btn.disabled = false; btn.textContent = '冒険を始める';
+  } else {
+    console.log('ログイン成功!', data.user.id);
+  }
 }
+
 async function handleSignup(e) {
   e.preventDefault();
-  const btn=document.getElementById('signupBtn'); btn.disabled=true; btn.textContent='登録中...';
-  const name=document.getElementById('signupName').value;
-  const {error}=await sb.auth.signUp({email:document.getElementById('signupEmail').value,password:document.getElementById('signupPassword').value,options:{data:{display_name:name}}});
-  if(error){document.getElementById('authError').textContent='登録失敗: '+error.message;}
-  else{document.getElementById('authError').style.color='var(--ok)';document.getElementById('authError').textContent='✅ 確認メールを送信しました！';}
-  btn.disabled=false; btn.textContent='登録して冒険へ';
+  const btn = document.getElementById('signupBtn');
+  const err = document.getElementById('authError');
+  btn.disabled = true; btn.textContent = '登録中...';
+  err.textContent = '';
+
+  const name = document.getElementById('signupName').value;
+  const email = document.getElementById('signupEmail').value;
+  const password = document.getElementById('signupPassword').value;
+  
+  console.log('新規登録試行:', email);
+  const { data, error } = await sb.auth.signUp({
+    email, password,
+    options: { data: { display_name: name } }
+  });
+  
+  if (error) {
+    console.error('登録エラー:', error);
+    err.style.color = 'var(--err)';
+    err.textContent = '登録失敗: ' + error.message;
+  } else {
+    console.log('登録成功!', data);
+    err.style.color = 'var(--ok)';
+    // すでに登録済みの場合、Supabaseのセキュリティ設定によってはエラーにならず空のidentitiesが返る
+    if (data.user && data.user.identities && data.user.identities.length === 0) {
+      err.textContent = '⚠️ このメールアドレスは既に登録されています。ログインをお試しください。';
+    } else {
+      err.textContent = '✅ 登録完了！メールを確認して認証するか、そのままログインをお試しください。';
+    }
+  }
+  btn.disabled = false; btn.textContent = '登録して冒険へ';
 }
-async function logout() { await sb.auth.signOut(); }
+
+async function logout() { 
+  console.log('ログアウト実行');
+  await sb.auth.signOut(); 
+}
 
 /* ================================================
    Main Init
