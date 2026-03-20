@@ -194,7 +194,17 @@ async function handleLogin(e) {
     const password = document.getElementById('loginPassword').value;
     
     console.log('ログイン開始:', email);
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    
+    // 10秒でタイムアウトさせるPromise
+    const timeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('通信タイムアウト：サーバーからの応答がありません。ネットワーク設定や広告ブロックを確認してください。')), 10000)
+    );
+
+    // ログイン処理とタイムアウトの早い方を取る
+    const { data, error } = await Promise.race([
+      sb.auth.signInWithPassword({ email, password }),
+      timeout
+    ]);
     
     if (error) {
       console.error('ログイン失敗:', error);
@@ -205,9 +215,11 @@ async function handleLogin(e) {
       console.log('ログイン成功 OK!', data?.user?.id);
     }
   } catch (ex) {
-    console.error('ログイン処理中に例外:', ex);
-    err.textContent = 'システムエラーが発生しました';
+    console.error('ログイン例外:', ex);
+    err.style.color = 'var(--err)';
+    err.textContent = ex.message || 'システムエラーが発生しました';
     btn.disabled = false; btn.textContent = '冒険を始める';
+    showToast('⚠️ 通信エラーが発生しました');
   }
 }
 
