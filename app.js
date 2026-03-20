@@ -101,47 +101,67 @@ function switchAuthTab(tab) {
 
 async function handleLogin(e) {
   e.preventDefault();
-  if (!sb) { alert('Supabaseが初期化されていません。リロードしてください。'); return; }
   const btn = document.getElementById('loginBtn');
   const err = document.getElementById('authError');
-  btn.disabled = true; btn.textContent = '通信中(直接接続)...';
+  btn.disabled = true; btn.textContent = '通信中...';
   err.textContent = '';
   
   try {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
     
-    // ライブラリの内部ロックバグを回避するため、直接APIを叩く
-    const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+    // Vercel API Route 経由でログイン（ブラウザの外部通信ブロックを回避）
+    const res = await fetch('/api/login', {
       method: 'POST',
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
     
     const data = await res.json();
     
     if (!res.ok) {
-      throw new Error(data.error_description || data.msg || 'メールアドレスまたはパスワードが正しくありません');
+      throw new Error(data.error || 'ログインに失敗しました');
     }
     
-    // 手動でセッションをセット（これにより onAuthStateChange が発火して進む）
-    await sb.auth.setSession({
-      access_token: data.access_token,
-      refresh_token: data.refresh_token
-    });
+    // トークンをローカルに保存し、手動で状態を切り替え
+    localStorage.setItem('hq_access_token', data.access_token);
+    localStorage.setItem('hq_refresh_token', data.refresh_token);
+    currentUser = data.user;
+    
+    // Supabase クライアントにセッションを設定（setSession は試みるが timeout を設ける）
+    if (sb) {
+      const setSessionTimeout = new Promise((_, r) => setTimeout(() => r(new Error('skip')), 3000));
+      try {
+        await Promise.race([
+          sb.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token }),
+          setSessionTimeout
+        ]);
+      } catch (_) {
+        // タイムアウトしても手動ユーザーで続行
+        console.log('setSession skipped, using manual user data');
+      }
+    }
+    
+    // メイン画面へ進む（onAuthStateChange が発火しなくても動く）
+    try {
+      await loadProfile();
+      await loadData();
+      await loadStageProgress();
+      await loadRecords();
+      showScreen('screen-main');
+    } catch (loadErr) {
+      showCriticalError(loadErr);
+    }
     
   } catch (ex) {
     err.style.color = 'var(--err)';
-    // fetch が失敗する場合はネット自体が遮断されている
     err.textContent = ex.message === 'Failed to fetch' 
-      ? '通信がブラウザに遮断されました。広告ブロックやVPNをオフにしてください。' 
+      ? '通信に失敗しました。ネット接続を確認してください。'
       : 'ログイン失敗: ' + ex.message;
     btn.disabled = false; btn.textContent = '冒険を始める';
   }
 }
+
 
 async function handleSignup(e) {
   e.preventDefault();
@@ -185,49 +205,105 @@ async function logout() {
 }
 
 /* ================================================
+   Supabase REST API ヘルパー（ライブラリ不使用・ハングなし）
+================================================ */
+function getToken() {
+  return localStorage.getItem('hq_access_token') || '';
+}
+
+async function dbFetch(table, options = {}) {
+  const {
+    method = 'GET',
+    filter = '',
+    body = null,
+    select = '*',
+    single = false,
+    upsert = false
+  } = options;
+  
+  let url = `${SUPABASE_URL}/rest/v1/${table}?select=${select}`;
+  if (filter) url += '&' + filter;
+  if (single) url += '&limit=1';
+  
+  const headers = {
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${getToken()}`,
+    'Content-Type': 'application/json',
+    'Prefer': single ? 'return=representation' : upsert ? 'resolution=merge-duplicates,return=representation' : 'return=representation'
+  };
+  
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined
+  });
+  
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.message || `DB Error ${res.status}`);
+  }
+  
+  const result = await res.json();
+  return single ? { data: Array.isArray(result) ? result[0] : result } : { data: result };
+}
+
+/* ================================================
    ライフサイクル / データロード
 ================================================ */
 if (sb) {
+  // onAuthStateChange はバックアップとして使う（通常は handleLogin で直接遷移）
   sb.auth.onAuthStateChange(async (event, session) => {
-    if (session?.user) {
+    if (session?.user && !currentUser) {
       currentUser = session.user;
       try {
         await loadProfile();
         await loadData();
         await loadStageProgress();
-        await loadRecords(); // ★ ここが前回欠けていてエラーになった
+        await loadRecords();
         showScreen('screen-main');
       } catch (err) {
         showCriticalError(err);
       }
-    } else {
-      currentUser = null;
-      currentProfile = null;
+    } else if (!session?.user && !currentUser) {
       showScreen('screen-auth');
     }
   });
 }
 
 async function loadProfile() {
-  const {data} = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
-  if (data) {
-    currentProfile = data;
-  } else {
-    // 新規作成
-    const name = currentUser.user_metadata?.display_name || '冒険者';
-    const {data:np} = await sb.from('profiles').upsert({id: currentUser.id, display_name: name}).select().single();
-    currentProfile = np || {id: currentUser.id, display_name: name, xp: 0, level: 1};
+  try {
+    const {data} = await dbFetch('profiles', { filter: `id=eq.${currentUser.id}`, single: true });
+    if (data && data.id) {
+      currentProfile = data;
+    } else {
+      const name = currentUser.user_metadata?.display_name || currentUser.email?.split('@')[0] || '冒険者';
+      const {data:np} = await dbFetch('profiles', {
+        method: 'POST',
+        body: { id: currentUser.id, display_name: name, xp: 0, level: 1 },
+        upsert: true, single: true
+      });
+      currentProfile = np || { id: currentUser.id, display_name: name, xp: 0, level: 1 };
+    }
+  } catch (err) {
+    console.warn('loadProfile fallback:', err.message);
+    currentProfile = { id: currentUser.id, display_name: '冒険者', xp: 0, level: 1 };
   }
   RPG.updateHeader();
 }
 
 let stageProgress = {};
 async function loadStageProgress() {
-  const {data} = await sb.from('stage_progress').select('*').eq('user_id', currentUser.id);
-  stageProgress = {};
-  if (data) data.forEach(r => stageProgress[r.stage] = r);
+  try {
+    const {data} = await dbFetch('stage_progress', { filter: `user_id=eq.${currentUser.id}` });
+    stageProgress = {};
+    if (data) data.forEach(r => stageProgress[r.stage] = r);
+  } catch (err) {
+    console.warn('loadStageProgress fallback:', err.message);
+    stageProgress = {};
+  }
   renderStageGrid();
 }
+
 
 async function saveStageProgress(stage, score, total, isPerfect) {
   const p = stageProgress[stage];
@@ -287,8 +363,13 @@ function renderStageGrid() {
 
 let localData = [];
 async function loadData() {
-  const {data} = await sb.from('quiz_data').select('*').eq('user_id', currentUser.id).order('year');
-  localData = data || [];
+  try {
+    const {data} = await dbFetch('quiz_data', { filter: `user_id=eq.${currentUser.id}`, select: '*' });
+    localData = data ? data.sort((a,b)=>a.year - b.year) : [];
+  } catch (err) {
+    console.warn('loadData fallback:', err.message);
+    localData = [];
+  }
   renderDataList();
 }
 
@@ -313,23 +394,34 @@ async function addEntry(year, event) {
   const e = String(event).trim();
   if(!y || !e) return false;
   if(localData.some(d => d.year === y && d.event === e)) return false;
-  const {data, error} = await sb.from('quiz_data').insert({user_id:currentUser.id, year:y, event:e}).select().single();
-  if(!error && data) { localData.push(data); return true; }
+  
+  try {
+    const {data} = await dbFetch('quiz_data', {
+      method: 'POST',
+      body: { user_id: currentUser.id, year: y, event: e },
+      single: true
+    });
+    if(data) { localData.push(data); return true; }
+  } catch(err) { console.error('addEntry err:', err); }
   return false;
 }
 
 async function deleteEntry(id) {
-  await sb.from('quiz_data').delete().eq('id',id).eq('user_id',currentUser.id);
-  localData = localData.filter(d => d.id !== id);
-  renderDataList();
+  try {
+    await dbFetch('quiz_data', { method: 'DELETE', filter: `id=eq.${id}&user_id=eq.${currentUser.id}` });
+    localData = localData.filter(d => d.id !== id);
+    renderDataList();
+  } catch(err) {}
 }
 
 async function clearAllData() {
   if(!confirm('全てのカスタムデータを削除しますか？')) return;
-  await sb.from('quiz_data').delete().eq('user_id', currentUser.id);
-  localData = [];
-  renderDataList();
-  showToast('🗑️ 全て削除しました');
+  try {
+    await dbFetch('quiz_data', { method: 'DELETE', filter: `user_id=eq.${currentUser.id}` });
+    localData = [];
+    renderDataList();
+    showToast('🗑️ 全て削除しました');
+  } catch(err) {}
 }
 
 async function manualAdd() {
@@ -523,7 +615,11 @@ async function showResult() {
   const newXP = (currentProfile.xp || 0) + xpGained;
   const oldLv = RPG.getLevel(currentProfile.xp || 0);
   const newLv = RPG.getLevel(newXP);
-  await sb.from('profiles').update({xp: newXP, level: newLv, updated_at: new Date().toISOString()}).eq('id', currentUser.id);
+  await dbFetch('profiles', {
+    method: 'PATCH',
+    filter: `id=eq.${currentUser.id}`,
+    body: { xp: newXP, level: newLv, updated_at: new Date().toISOString() }
+  });
   currentProfile.xp = newXP;
   RPG.updateHeader();
   
@@ -574,11 +670,21 @@ async function showResult() {
 }
 
 async function saveRecord(mode, score, total, xpEarned, isPerfect) {
-  await sb.from('quiz_records').insert({user_id: currentUser.id, mode, score, total, xp_earned: xpEarned, is_perfect: isPerfect});
+  try {
+    await dbFetch('quiz_records', {
+      method: 'POST',
+      body: { user_id: currentUser.id, mode, score, total, xp_earned: xpEarned, is_perfect: isPerfect }
+    });
+  } catch(err) { console.error('saveRecord err:', err); }
 }
 
 async function loadRecords() {
-  const {data} = await sb.from('quiz_records').select('*').eq('user_id', currentUser.id).order('created_at', {ascending: false}).limit(20);
+  let data = [];
+  try {
+    const res = await dbFetch('quiz_records', { filter: `user_id=eq.${currentUser.id}&order=created_at.desc&limit=20` });
+    data = res.data || [];
+  } catch(err) { console.warn('loadRecords err:', err); }
+  
   if (!data) return;
   document.getElementById('statTotal').textContent = data.length;
   document.getElementById('statPerfect').textContent = data.filter(r=>r.is_perfect).length;
