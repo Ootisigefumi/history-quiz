@@ -1,538 +1,527 @@
-/**
- * 歴史クエスト - RPG風クイズアプリ
- */
 'use strict';
 
 /* ================================================
-   DataStore
+   Supabase 初期化
 ================================================ */
-const DataStore = {
-  KEY: 'history_quiz_data',
-  getAll() { try { return JSON.parse(localStorage.getItem(this.KEY)) || []; } catch { return []; } },
-  add(entry) {
-    if (entry.year === null || entry.year === undefined || entry.year === '' || !entry.event) return false;
-    const data = this.getAll();
-    const y = Number(entry.year), e = String(entry.event).trim();
-    if (data.some(d => Number(d.year) === y && String(d.event).trim() === e)) return false;
-    data.push({ year: y, event: e });
-    localStorage.setItem(this.KEY, JSON.stringify(data));
-    return true;
-  },
-  remove(i) { const d = this.getAll(); d.splice(i, 1); localStorage.setItem(this.KEY, JSON.stringify(d)); },
-  clear() { localStorage.removeItem(this.KEY); },
-  exportJSON() {
-    const d = this.getAll();
-    const b = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
-    const u = URL.createObjectURL(b);
-    const a = document.createElement('a');
-    a.href = u; a.download = `history-quest-${new Date().toISOString().slice(0,10)}.json`; a.click();
-    URL.revokeObjectURL(u);
-  },
-  async importJSON(file) {
-    if (!file) return 0;
-    return new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = (e) => {
-        try {
-          const arr = JSON.parse(e.target.result);
-          if (!Array.isArray(arr)) throw new Error('配列形式ではありません');
-          let n = 0;
-          for (const it of arr) {
-            const y = it.year !== undefined ? it.year : it.Year;
-            const ev = it.event !== undefined ? it.event : it.Event;
-            if (y !== undefined && ev) { if (this.add({ year: y, event: ev })) n++; }
-          }
-          resolve(n);
-        } catch (err) { reject(err); }
-      };
-      r.onerror = () => reject(new Error('ファイル読み込み失敗'));
-      r.readAsText(file);
-    });
-  }
-};
+const SUPABASE_URL = 'https://utjtlrmvleagdypcnfky.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0anRscm12bGVhZ2R5cGNuZmt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5ODgzNTksImV4cCI6MjA4OTU2NDM1OX0.CoE2ZNMHZGaVBjsq28uAMt0bRg4RzfNtDiOKcH8huOM';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/* ================================================
-   PDF & OCR Processor
-================================================ */
-const PDFProcessor = {
-  async toImageBlobs(file, onProgress) {
-    const ab = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
-    const blobs = [];
-    const c = document.createElement('canvas'), ctx = c.getContext('2d');
-    for (let i = 1; i <= pdf.numPages; i++) {
-      onProgress(i, pdf.numPages);
-      const pg = await pdf.getPage(i);
-      const vp = pg.getViewport({ scale: 2.0 });
-      c.width = vp.width; c.height = vp.height;
-      await pg.render({ canvasContext: ctx, viewport: vp }).promise;
-      blobs.push(await new Promise(r => c.toBlob(r, 'image/png')));
-    }
-    return blobs;
-  },
-  isPDF(f) { return f.type === 'application/pdf' || f.name.endsWith('.pdf'); }
-};
-
-const OCRProcessor = {
-  async processFiles(files, onProgress) {
-    const all = [];
-    let w = null;
-    try {
-      onProgress(0, files.length, '準備中...');
-      w = await Tesseract.createWorker(['jpn', 'eng']);
-      for (let i = 0; i < files.length; i++) {
-        onProgress(i, files.length, `解読中 (${i+1}/${files.length})`);
-        const { data: { text } } = await w.recognize(files[i]);
-        all.push(...DataParser.parse(text));
-      }
-    } finally { if (w) await w.terminate(); }
-    return all;
-  }
-};
-
-const DataParser = {
-  parse(text) {
-    const results = [];
-    for (const line of text.split(/\r?\n/)) {
-      const m = line.match(/(\d{1,4})\s*[年\s]?\s*(.{3,})/);
-      if (m) {
-        const yr = parseInt(m[1], 10);
-        const ev = m[2].replace(/^[年\s:：]+/, '').trim();
-        if (yr && ev.length > 2) results.push({ year: yr, event: ev });
-      }
-    }
-    return results;
-  }
-};
+let currentUser = null;
+let currentProfile = null;
 
 /* ================================================
    RPG システム
 ================================================ */
 const RPG = {
-  XP_KEY: 'history_quest_xp',
-  
-  getXP() { return parseInt(localStorage.getItem(this.XP_KEY) || '0', 10); },
-  addXP(n) {
-    const before = this.getXP();
-    const after = before + n;
-    localStorage.setItem(this.XP_KEY, String(after));
-    return { before, after, leveledUp: this.getLevel(after) > this.getLevel(before) };
-  },
   getLevel(xp) {
-    if (xp === undefined) xp = this.getXP();
-    if (xp < 50) return 1;
-    if (xp < 150) return 2;
-    if (xp < 300) return 3;
-    if (xp < 500) return 4;
-    if (xp < 800) return 5;
-    if (xp < 1200) return 6;
-    if (xp < 1800) return 7;
-    if (xp < 2500) return 8;
-    if (xp < 3500) return 9;
-    return 10;
+    const t = [0,50,150,300,500,800,1200,1800,2500,3500];
+    return t.findIndex((v,i)=>xp<(t[i+1]||Infinity))+1 || 10;
   },
-  getClass(level) {
-    const classes = [
-      '🗡️ 見習い剣士', '🗡️ 剣士', '⚔️ 戦士',
-      '🛡️ 衛兵', '🏹 弓騎士', '🔥 魔法剣士',
-      '⭐ 英雄', '👑 聖騎士', '🐉 竜騎士', '🏯 歴史王'
-    ];
-    return classes[Math.min(level - 1, classes.length - 1)];
+  getClass(lv) {
+    return ['🗡️ 見習い剣士','⚔️ 剣士','🛡️ 戦士','🏹 弓騎士','🔥 魔法剣士','⭐ 英雄','💎 聖騎士','🐉 竜騎士','👑 大魔王','🏯 歴史王'][Math.min(lv-1,9)];
   },
-  getXPForNextLevel(level) {
-    const thresholds = [0, 50, 150, 300, 500, 800, 1200, 1800, 2500, 3500, 9999];
-    return thresholds[Math.min(level, thresholds.length - 1)];
+  xpToNext(lv) {
+    return [50,150,300,500,800,1200,1800,2500,3500,9999][Math.min(lv-1,9)];
   },
-  
-  // 敵のランダム生成
+  xpBase(lv) {
+    return [0,50,150,300,500,800,1200,1800,2500,3500][Math.min(lv-1,9)];
+  },
   enemies: [
-    { name: '年号ゴブリン', emoji: '👹' },
-    { name: '歴史スライム', emoji: '🟢' },
-    { name: '時空のドラゴン', emoji: '🐉' },
-    { name: '古文書の亡霊', emoji: '👻' },
-    { name: '忘却の魔王', emoji: '😈' },
-    { name: '暗黒騎士', emoji: '🖤' },
-    { name: '年表ゴーレム', emoji: '🗿' },
-    { name: '記憶の怪物', emoji: '🧟' },
+    {name:'年号ゴブリン',emoji:'👹'},{name:'歴史スライム',emoji:'🟢'},
+    {name:'時空龍',emoji:'🐉'},{name:'古文書の亡霊',emoji:'👻'},
+    {name:'忘却の魔王',emoji:'😈'},{name:'暗黒騎士',emoji:'🦹'},
+    {name:'年表ゴーレム',emoji:'🗿'},{name:'記憶の怪物',emoji:'🧟'},
   ],
-  getRandomEnemy() {
-    return this.enemies[Math.floor(Math.random() * this.enemies.length)];
-  },
-  
-  updateStatusBar() {
-    const xp = this.getXP();
+  randomEnemy() { return this.enemies[Math.floor(Math.random()*this.enemies.length)]; },
+  updateHeader() {
+    if (!currentProfile) return;
+    const xp = currentProfile.xp || 0;
     const lv = this.getLevel(xp);
-    document.getElementById('playerLevel').textContent = `Lv.${lv}`;
-    document.getElementById('playerClass').textContent = this.getClass(lv);
-    document.getElementById('totalXP').textContent = xp;
-    if (document.getElementById('playerNameBattle')) {
-      document.getElementById('playerNameBattle').textContent = this.getClass(lv);
-    }
+    document.getElementById('headerClass').textContent = this.getClass(lv);
+    document.getElementById('headerLv').textContent = `Lv.${lv}`;
+    document.getElementById('headerXP').textContent = xp;
+    const pct = ((xp - this.xpBase(lv)) / (this.xpToNext(lv) - this.xpBase(lv))) * 100;
+    document.getElementById('headerXPBar').style.width = `${Math.min(pct,100)}%`;
+    document.getElementById('pbName').textContent = this.getClass(lv);
   }
 };
 
 /* ================================================
-   Quiz Engine & State
+   Auth UI
 ================================================ */
-let currentQuizMode = 'random';
-let currentQuizList = [];
-let currentIndex = 0;
-let score = 0;
-let reviewData = [];
-let playerHP = 5;
-let maxHP = 5;
-let currentEnemy = null;
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('loginForm').style.display = tab==='login'?'block':'none';
+  document.getElementById('signupForm').style.display = tab==='signup'?'block':'none';
+  document.querySelector(`.auth-tab:${tab==='login'?'first':'last'}-child`).classList.add('active');
+  document.getElementById('authError').textContent = '';
+}
 
-const QuizEngine = {
-  generate(data, mode, limit = 10, sourceData = null) {
-    currentQuizMode = mode;
-    const base = sourceData || data;
-    const shuffled = [...base].sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, Math.min(limit, base.length));
-    
-    currentQuizList = selected.map(item => {
-      let type;
-      if (mode === 'yearToEvent') type = 1;
-      else if (mode === 'eventToYear') type = 2;
-      else type = Math.random() > 0.5 ? 1 : 2;
-      return { ...item, type, pattern: type === 1 ? '年号の試練' : '出来事の試練' };
-    });
-    
-    currentIndex = 0;
-    score = 0;
-    reviewData = [];
-    playerHP = 5;
-    maxHP = 5;
-    return currentQuizList[0];
+async function handleLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = '接続中...';
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    document.getElementById('authError').textContent = 'ログイン失敗: ' + error.message;
+    btn.disabled = false; btn.textContent = '冒険を始める';
   }
-};
+}
+
+async function handleSignup(e) {
+  e.preventDefault();
+  const btn = document.getElementById('signupBtn');
+  btn.disabled = true; btn.textContent = '登録中...';
+  const name = document.getElementById('signupName').value;
+  const email = document.getElementById('signupEmail').value;
+  const password = document.getElementById('signupPassword').value;
+  const { error } = await sb.auth.signUp({
+    email, password,
+    options: { data: { display_name: name } }
+  });
+  if (error) {
+    document.getElementById('authError').textContent = '登録失敗: ' + error.message;
+    btn.disabled = false; btn.textContent = '登録して冒険へ';
+  } else {
+    document.getElementById('authError').style.color = 'var(--ok)';
+    document.getElementById('authError').textContent = '✅ 確認メールを送信しました！メールを確認後ログインしてください。';
+    btn.disabled = false; btn.textContent = '登録して冒険へ';
+  }
+}
+
+async function logout() {
+  await sb.auth.signOut();
+}
 
 /* ================================================
-   UI Controller
+   Main Init
 ================================================ */
-const UIController = {
-  showScreen(id) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    window.scrollTo(0, 0);
-  },
-  
-  renderDataList() {
-    const data = DataStore.getAll();
-    const list = document.getElementById('dataList');
-    document.getElementById('dataCount').textContent = data.length;
-    list.innerHTML = data.length ? '' : '<div class="empty-state">まだ知識がありません。巻物をアップロードしましょう。</div>';
-    data.forEach((it, i) => {
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (session?.user) {
+    currentUser = session.user;
+    await loadProfile();
+    showScreen('screen-main');
+    await loadData();
+    loadRecords();
+  } else {
+    currentUser = null;
+    currentProfile = null;
+    showScreen('screen-auth');
+  }
+});
+
+async function loadProfile() {
+  const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  if (data) {
+    currentProfile = data;
+  } else {
+    // フォールバック作成
+    const name = currentUser.user_metadata?.display_name || '冒険者';
+    const { data: newProfile } = await sb.from('profiles')
+      .upsert({ id: currentUser.id, display_name: name, xp: 0, level: 1 }, { onConflict: 'id' })
+      .select().single();
+    currentProfile = newProfile || { id: currentUser.id, display_name: name, xp: 0, level: 1 };
+  }
+  RPG.updateHeader();
+}
+
+/* ================================================
+   Data（Supabase）
+================================================ */
+let localData = [];
+
+async function loadData() {
+  const { data, error } = await sb.from('quiz_data').select('*').eq('user_id', currentUser.id).order('year');
+  if (!error) {
+    localData = data || [];
+    renderDataList();
+  }
+}
+
+async function addEntry(year, event) {
+  const y = Number(year); const e = String(event).trim();
+  if (!y || !e) return false;
+  if (localData.some(d => d.year === y && d.event === e)) return false;
+  const { data, error } = await sb.from('quiz_data')
+    .insert({ user_id: currentUser.id, year: y, event: e })
+    .select().single();
+  if (!error && data) { localData.push(data); return true; }
+  return false;
+}
+
+async function deleteEntry(id) {
+  await sb.from('quiz_data').delete().eq('id', id).eq('user_id', currentUser.id);
+  localData = localData.filter(d => d.id !== id);
+  renderDataList();
+}
+
+async function clearAllData() {
+  if (!confirm('全データを削除しますか？')) return;
+  await sb.from('quiz_data').delete().eq('user_id', currentUser.id);
+  localData = [];
+  renderDataList();
+  showToast('🗑️ 全データを削除しました');
+}
+
+function renderDataList() {
+  const list = document.getElementById('dataList');
+  document.getElementById('dataCount').textContent = localData.length;
+  if (!localData.length) {
+    list.innerHTML = '<div class="empty-st">まだ知識がありません。巻物をアップロードしましょう。</div>';
+  } else {
+    list.innerHTML = '';
+    localData.forEach(item => {
       const d = document.createElement('div');
-      d.className = 'data-item';
-      d.innerHTML = `<span class="year-badge">${it.year}年</span><span>${it.event}</span><button class="delete-btn" onclick="deleteData(${i})">✕</button>`;
+      d.className = 'd-item';
+      d.innerHTML = `<span class="d-year">${item.year}年</span><span>${item.event}</span><button class="d-del" onclick="deleteEntry(${item.id})">✕</button>`;
       list.appendChild(d);
     });
-    const hasData = data.length > 0;
-    document.getElementById('btnStartMode1').disabled = !hasData;
-    document.getElementById('btnStartMode2').disabled = !hasData;
-    document.getElementById('btnStartMode3').disabled = !hasData;
-  },
-  
-  renderQuestion() {
-    const q = currentQuizList[currentIndex];
-    currentEnemy = RPG.getRandomEnemy();
-    
-    // 敵
-    const sprite = document.getElementById('enemySprite');
-    sprite.textContent = currentEnemy.emoji;
-    sprite.className = 'enemy-sprite';
-    document.getElementById('enemyName').textContent = currentEnemy.name;
-    
-    const remaining = currentQuizList.length - currentIndex;
-    document.getElementById('enemyHpFill').style.width = `${(remaining / currentQuizList.length) * 100}%`;
-    document.getElementById('enemyHpText').textContent = `HP ${remaining}/${currentQuizList.length}`;
-    
-    // 問題
-    document.getElementById('quizProgressText').textContent = `${currentIndex + 1} / ${currentQuizList.length}`;
-    document.getElementById('quizPatternBadge').textContent = q.pattern;
-    document.getElementById('quizQuestion').innerHTML = q.type === 1
-      ? `⚡ <span style="color:var(--gold);font-size:1.4rem">${q.year}年</span> に何が起きた？`
-      : `⚡ <span style="color:var(--gold)">${q.event}</span> は何年？`;
-    
-    const input = document.getElementById('answerInput');
-    input.type = q.type === 1 ? 'text' : 'number';
-    input.placeholder = q.type === 1 ? '出来事を入力...' : '西暦（数字）を入力...';
-    input.value = '';
-    input.disabled = false;
-    input.className = 'rpg-input answer-input';
-    
-    document.getElementById('btnAnswer').style.display = 'inline-flex';
-    document.getElementById('btnNext').style.display = 'none';
-    
-    // プレイヤーHP
-    updatePlayerHP();
-    
-    setTimeout(() => input.focus(), 100);
   }
-};
-
-function updatePlayerHP() {
-  const pct = (playerHP / maxHP) * 100;
-  const fill = document.getElementById('playerHpFill');
-  fill.style.width = `${pct}%`;
-  fill.style.background = pct > 50 ? 'var(--hp-green)' : pct > 25 ? 'var(--hp-yellow)' : 'var(--hp-red)';
-  document.getElementById('playerHpVal').textContent = playerHP;
-  document.getElementById('playerHpText').innerHTML = `HP <span id="playerHpVal">${playerHP}</span>/${maxHP}`;
+  const has = localData.length > 0;
+  ['btnQ1','btnQ2','btnQ3'].forEach(id => document.getElementById(id).disabled = !has);
 }
 
-/* ================================================
-   Actions
-================================================ */
-async function processFiles(files) {
-  const wrap = document.getElementById('ocrProgressWrap');
-  const bar = document.getElementById('ocrProgressBar');
-  const txt = document.getElementById('ocrStatusText');
-  wrap.classList.add('visible');
-
-  const blobs = [];
-  for (const f of files) {
-    if (PDFProcessor.isPDF(f)) {
-      const pb = await PDFProcessor.toImageBlobs(f, (p, t) => txt.textContent = `巻物展開中 (${p}/${t})`);
-      blobs.push(...pb);
-    } else blobs.push(f);
-  }
-
-  const entries = await OCRProcessor.processFiles(blobs, (d, t, m) => {
-    bar.style.width = `${(d/t)*100}%`;
-    txt.textContent = m;
-  });
-
-  let added = 0;
-  entries.forEach(e => { if (DataStore.add(e)) added++; });
-  wrap.classList.remove('visible');
-  bar.style.width = '0%';
-  UIController.renderDataList();
-  showToast(added > 0 ? `✅ ${added}件の知識を獲得！` : '新しい知識は見つかりませんでした');
-}
-
-function manualAdd() {
+async function manualAdd() {
   const y = document.getElementById('manualYear');
   const e = document.getElementById('manualEvent');
-  if (DataStore.add({ year: Number(y.value), event: e.value.trim() })) {
-    y.value = ''; e.value = '';
-    UIController.renderDataList();
-    showToast('📜 知識を記録しました');
-  }
+  const added = await addEntry(y.value, e.value);
+  if (added) { y.value=''; e.value=''; renderDataList(); showToast('📜 知識を記録しました'); }
+  else showToast('⚠️ 追加できませんでした（重複または不正）');
 }
 
-function deleteData(i) { DataStore.remove(i); UIController.renderDataList(); }
-function clearAllData() { if (confirm('全データを消去しますか？')) { DataStore.clear(); UIController.renderDataList(); } }
-function exportData() { DataStore.exportJSON(); showToast('💾 冒険の書を保存しました'); }
+function exportData() {
+  const blob = new Blob([JSON.stringify(localData.map(d=>({year:d.year,event:d.event})),null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=`history-quest-${new Date().toISOString().slice(0,10)}.json`; a.click();
+  URL.revokeObjectURL(url); showToast('💾 バックアップしました');
+}
+
 async function importData(e) {
-  const file = e.target.files?.[0];
-  if (!file) return;
+  const file = e.target.files?.[0]; if (!file) return;
   try {
-    const added = await DataStore.importJSON(file);
-    UIController.renderDataList();
-    showToast(added > 0 ? `✅ ${added}件の知識を獲得！` : '⚠️ 新しいデータはありませんでした');
-  } catch (err) { showToast('❌ 読み込み失敗: ' + err.message); }
+    const text = await file.text();
+    const arr = JSON.parse(text);
+    if (!Array.isArray(arr)) throw new Error('配列形式ではありません');
+    let added = 0;
+    for (const it of arr) {
+      const y = it.year ?? it.Year, ev = it.event ?? it.Event;
+      if (y && ev && await addEntry(y, ev)) added++;
+    }
+    renderDataList();
+    showToast(added ? `✅ ${added}件追加しました` : '⚠️ 新しいデータはありませんでした');
+  } catch(err) { showToast('❌ 読込失敗: '+err.message); }
   e.target.value = '';
 }
 
-function startQuiz(mode) {
-  const data = DataStore.getAll();
-  if (data.length === 0) return;
-  QuizEngine.generate(data, mode);
-  document.getElementById('battleLog').innerHTML = '<div class="log-entry">⚔️ 戦闘開始！歴史の迷宮に挑む！</div>';
-  UIController.showScreen('screen-quiz');
-  UIController.renderQuestion();
+/* ================================================
+   Records
+================================================ */
+async function saveRecord(mode, score, total, xpEarned, isPerfect) {
+  await sb.from('quiz_records').insert({
+    user_id: currentUser.id, mode, score, total, xp_earned: xpEarned, is_perfect: isPerfect
+  });
 }
 
-function addBattleLog(text, type) {
-  const log = document.getElementById('battleLog');
-  const div = document.createElement('div');
-  div.className = `log-entry ${type}`;
-  div.textContent = text;
-  log.appendChild(div);
-  log.scrollTop = log.scrollHeight;
+async function loadRecords() {
+  const { data } = await sb.from('quiz_records')
+    .select('*').eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false }).limit(20);
+  if (!data) return;
+  const list = document.getElementById('recordsList');
+  const total = data.length;
+  const perfect = data.filter(r=>r.is_perfect).length;
+  const totalXP = data.reduce((s,r)=>s+(r.xp_earned||0),0);
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statPerfect').textContent = perfect;
+  document.getElementById('statTotalXP').textContent = totalXP;
+  if (!data.length) { list.innerHTML='<div class="empty-st">まだ記録がありません。クエストに挑みましょう！</div>'; return; }
+  list.innerHTML = '';
+  data.forEach(r => {
+    const pct = Math.round((r.score/r.total)*100);
+    const d = new Date(r.created_at);
+    const dateStr = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const div = document.createElement('div');
+    div.className = 'rec-item';
+    const modeLabel = r.mode==='yearToEvent'?'年号の試練':r.mode==='eventToYear'?'出来事の試練':'混沌の迷宮';
+    div.innerHTML = `
+      <div>
+        <span class="rec-mode">${modeLabel}</span>
+        ${r.is_perfect?'<span class="rec-perfect"> ✨満点</span>':''}
+        <div class="rec-date">${dateStr}</div>
+      </div>
+      <div style="text-align:right">
+        <span class="rec-score ${pct===100?'rec-perfect':''}">${pct}%</span>
+        <div class="rec-date">+${r.xp_earned||0}XP</div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+/* ================================================
+   PDF / OCR
+================================================ */
+const PDFProcessor = {
+  async toImageBlobs(file, onProgress) {
+    const pdf = await pdfjsLib.getDocument({data: await file.arrayBuffer()}).promise;
+    const blobs=[]; const c=document.createElement('canvas'); const ctx=c.getContext('2d');
+    for (let i=1;i<=pdf.numPages;i++) {
+      onProgress(i,pdf.numPages);
+      const pg=await pdf.getPage(i); const vp=pg.getViewport({scale:2});
+      c.width=vp.width; c.height=vp.height;
+      await pg.render({canvasContext:ctx,viewport:vp}).promise;
+      blobs.push(await new Promise(r=>c.toBlob(r,'image/png')));
+    }
+    return blobs;
+  },
+  isPDF(f){ return f.type==='application/pdf'||f.name.endsWith('.pdf'); }
+};
+
+async function processFiles(files) {
+  const wrap=document.getElementById('ocrWrap');
+  const bar=document.getElementById('ocrBar');
+  const txt=document.getElementById('ocrStatus');
+  wrap.classList.add('visible');
+  const blobs=[];
+  for (const f of files) {
+    if (PDFProcessor.isPDF(f)) {
+      const pb=await PDFProcessor.toImageBlobs(f,(p,t)=>txt.textContent=`PDF展開中 (${p}/${t})`);
+      blobs.push(...pb);
+    } else blobs.push(f);
+  }
+  let worker=null;
+  try {
+    txt.textContent='OCR初期化中...';
+    worker=await Tesseract.createWorker(['jpn','eng']);
+    let added=0;
+    for (let i=0;i<blobs.length;i++) {
+      bar.style.width=`${(i/blobs.length)*100}%`;
+      txt.textContent=`文字解読中 (${i+1}/${blobs.length})`;
+      const {data:{text}}=await worker.recognize(blobs[i]);
+      for (const line of text.split(/\r?\n/)) {
+        const m=line.match(/(\d{1,4})\s*[年\s]+(.{3,})/);
+        if (m) {const ok=await addEntry(parseInt(m[1]),m[2].replace(/^[年\s:：]+/,'').trim()); if(ok) added++;}
+      }
+    }
+    renderDataList();
+    showToast(added?`✅ ${added}件の知識を獲得！`:'📖 新しいデータは見つかりませんでした');
+  } finally {
+    if (worker) await worker.terminate();
+    wrap.classList.remove('visible');
+    bar.style.width='0%';
+  }
+}
+
+/* ================================================
+   Quiz Engine
+================================================ */
+let curMode='random', quizList=[], quizIndex=0, quizScore=0, reviewData=[], playerHP=5, maxHP=5;
+
+function startQuiz(mode) {
+  if (!localData.length) return;
+  curMode = mode;
+  const shuffled=[...localData].sort(()=>Math.random()-.5).slice(0,10);
+  quizList = shuffled.map(item=>{
+    let type = mode==='yearToEvent'?1:mode==='eventToYear'?2:(Math.random()>.5?1:2);
+    return {...item, type, pattern: type===1?'年号の試練':'出来事の試練'};
+  });
+  quizIndex=0; quizScore=0; reviewData=[]; playerHP=5; maxHP=5;
+  document.getElementById('battleLog').innerHTML='<div>⚔️ バトル開始！歴史の迷宮へ！</div>';
+  showScreen('screen-battle');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q=quizList[quizIndex];
+  const enemy=RPG.randomEnemy();
+  const sp=document.getElementById('enemySprite');
+  sp.textContent=enemy.emoji; sp.className='enemy-sprite';
+  document.getElementById('enemyName').textContent=enemy.name;
+  const rem=quizList.length-quizIndex;
+  document.getElementById('enemyHP').style.width=`${(rem/quizList.length)*100}%`;
+  document.getElementById('battleBadge').textContent=q.pattern;
+  document.getElementById('battleQ').innerHTML = q.type===1
+    ? `⚡ <span style="color:var(--gold);font-size:1.3em">${q.year}年</span> に何が起きた？`
+    : `⚡ <span style="color:var(--gold)">${q.event}</span> は何年？`;
+  const input=document.getElementById('battleInput');
+  input.type=q.type===1?'text':'number';
+  input.placeholder=q.type===1?'出来事を入力...':'西暦（数字）を入力...';
+  input.value=''; input.disabled=false;
+  document.getElementById('btnAttack').style.display='inline-flex';
+  document.getElementById('btnNext').style.display='none';
+  updatePlayerBar();
+  setTimeout(()=>input.focus(),100);
+}
+
+function updatePlayerBar() {
+  const pct=(playerHP/maxHP)*100;
+  const fill=document.getElementById('playerHPBar');
+  fill.style.width=`${pct}%`;
+  fill.style.background=pct>50?'var(--green)':pct>25?'orange':'var(--err)';
+  document.getElementById('pbHP').textContent=`HP ${playerHP}/${maxHP}`;
+}
+
+function addLog(msg, type) {
+  const log=document.getElementById('battleLog');
+  const d=document.createElement('div'); d.className=type; d.textContent=msg;
+  log.appendChild(d); log.scrollTop=log.scrollHeight;
 }
 
 function checkAnswer() {
-  const q = currentQuizList[currentIndex];
-  const input = document.getElementById('answerInput');
-  const userAnswer = input.value.trim();
-  const isCorrect = q.type === 1
-    ? (q.event.includes(userAnswer) && userAnswer.length > 1)
-    : (Number(userAnswer) === q.year);
-
-  input.disabled = true;
-  document.getElementById('btnAnswer').style.display = 'none';
-  document.getElementById('btnNext').style.display = 'inline-flex';
-
-  const sprite = document.getElementById('enemySprite');
-
-  if (isCorrect) {
-    score++;
-    sprite.classList.add('hit');
-    setTimeout(() => sprite.classList.remove('hit'), 400);
-    addBattleLog(`✨ ${q.year}年「${q.event}」正解！会心の一撃！`, 'log-correct');
+  const q=quizList[quizIndex];
+  const ua=document.getElementById('battleInput').value.trim();
+  const ok=q.type===1?(q.event.includes(ua)&&ua.length>1):(Number(ua)===q.year);
+  document.getElementById('battleInput').disabled=true;
+  document.getElementById('btnAttack').style.display='none';
+  document.getElementById('btnNext').style.display='inline-flex';
+  const sp=document.getElementById('enemySprite');
+  if (ok) {
+    quizScore++;
+    sp.classList.add('hit'); setTimeout(()=>sp.classList.remove('hit'),400);
+    addLog(`✨ 正解！${q.year}年「${q.event}」の攻撃が命中！`,'log-ok');
   } else {
     playerHP--;
-    updatePlayerHP();
-    // プレイヤーダメージ演出
-    const hpArea = document.querySelector('.player-hp-area');
-    hpArea.classList.add('damaged');
-    setTimeout(() => hpArea.classList.remove('damaged'), 300);
-    addBattleLog(`💥 不正解... 正解は ${q.year}年「${q.event}」。ダメージを受けた！`, 'log-wrong');
+    const pb=document.querySelector('.player-bar');
+    pb.classList.add('shake'); setTimeout(()=>pb.classList.remove('shake'),300);
+    addLog(`💥 不正解... 正解は${q.year}年「${q.event}」。ダメージ！`,'log-ng');
+    updatePlayerBar();
   }
-
-  reviewData.push({ ...q, userAnswer, isCorrect });
+  reviewData.push({...q, userAnswer:ua, isCorrect:ok});
 }
 
 function nextQuestion() {
-  currentIndex++;
-  if (currentIndex < currentQuizList.length && playerHP > 0) {
-    UIController.renderQuestion();
+  quizIndex++;
+  if (quizIndex<quizList.length && playerHP>0) {
+    renderQuestion();
   } else {
-    // 敵討伐演出
-    const sprite = document.getElementById('enemySprite');
-    sprite.classList.add('dead');
-    setTimeout(() => showScore(), 800);
+    document.getElementById('enemySprite').classList.add('dead');
+    setTimeout(showResult, 700);
   }
 }
 
-function showScore() {
-  UIController.showScreen('screen-score');
+async function showResult() {
+  showScreen('screen-result');
+  const total=quizList.length;
+  const wrong=total-quizScore;
+  const isPerfect=quizScore===total;
+  const isDefeat=playerHP<=0;
+  const xpGained=quizScore*10+(isPerfect?50:0);
 
-  const total = currentQuizList.length;
-  const wrong = total - score;
-  const isPerfect = score === total;
-  const isDefeat = playerHP <= 0;
-  const earnedXP = score * 10 + (isPerfect ? 50 : 0);
+  // XP保存
+  const newXP=(currentProfile.xp||0)+xpGained;
+  const oldLv=RPG.getLevel(currentProfile.xp||0);
+  const newLv=RPG.getLevel(newXP);
+  const lvUp=newLv>oldLv;
+  await sb.from('profiles').update({xp:newXP,level:newLv,updated_at:new Date().toISOString()}).eq('id',currentUser.id);
+  currentProfile.xp=newXP; currentProfile.level=newLv;
+  RPG.updateHeader();
 
-  // XP加算
-  const xpResult = RPG.addXP(earnedXP);
-  RPG.updateStatusBar();
+  // 記録保存
+  await saveRecord(curMode,quizScore,total,xpGained,isPerfect);
+  loadRecords();
 
-  // バナー
-  const banner = document.getElementById('resultBanner');
-  const icon = document.getElementById('resultIcon');
-  const title = document.getElementById('resultTitle');
-  const sub = document.getElementById('resultSub');
-
+  // UI
+  const icon=document.getElementById('rIcon');
+  const title=document.getElementById('rTitle');
+  const sub=document.getElementById('rSub');
   if (isPerfect) {
-    icon.textContent = '🏆';
-    title.textContent = 'PERFECT VICTORY!';
-    title.className = 'result-title victory';
-    sub.textContent = '全問正解！伝説の勇者よ！';
-    // 紙吹雪
-    confetti({ particleCount: 200, spread: 80, origin: { y: 0.5 }, colors: ['#ffd764', '#ffe99a', '#fff', '#c9a227'] });
-    setTimeout(() => confetti({ particleCount: 100, spread: 60, origin: { x: 0.2, y: 0.6 } }), 500);
-    setTimeout(() => confetti({ particleCount: 100, spread: 60, origin: { x: 0.8, y: 0.6 } }), 1000);
-    setTimeout(showCertificate, 2000);
+    icon.textContent='🏆'; title.textContent='PERFECT!'; title.className='result-title win';
+    sub.textContent='全問正解！伝説の勇者！';
+    confetti({particleCount:200,spread:80,colors:['#ffd764','#ffe99a','#fff','#c9a227']});
+    setTimeout(()=>confetti({particleCount:80,spread:60,origin:{x:.2,y:.6}}),500);
+    setTimeout(()=>confetti({particleCount:80,spread:60,origin:{x:.8,y:.6}}),1000);
+    setTimeout(showCert,2000);
   } else if (isDefeat) {
-    icon.textContent = '💀';
-    title.textContent = 'DEFEAT...';
-    title.className = 'result-title defeat';
-    sub.textContent = 'HPが尽きた...もう一度挑戦しよう！';
+    icon.textContent='💀'; title.textContent='DEFEAT...'; title.className='result-title lose';
+    sub.textContent='HPが尽きた...もう一度挑もう！';
   } else {
-    icon.textContent = '⚔️';
-    title.textContent = 'VICTORY!';
-    title.className = 'result-title victory';
-    sub.textContent = '敵を討伐した！';
+    icon.textContent='⚔️'; title.textContent='VICTORY!'; title.className='result-title win';
+    sub.textContent=`${Math.round((quizScore/total)*100)}% クリア！`;
   }
 
-  // 統計値
-  document.getElementById('statCorrect').textContent = score;
-  document.getElementById('statWrong').textContent = wrong;
-  document.getElementById('statXP').textContent = `+${earnedXP}`;
+  document.getElementById('rsCorrect').textContent=quizScore;
+  document.getElementById('rsWrong').textContent=wrong;
+  document.getElementById('rsXP').textContent=`+${xpGained}`;
+  const lvArea=document.getElementById('lvUpArea');
+  if (lvUp) { lvArea.style.display='block'; document.getElementById('lvUpText').textContent=`🎉 LEVEL UP! → Lv.${newLv} ${RPG.getClass(newLv)}`; }
+  else lvArea.style.display='none';
 
-  // XP バー演出
-  const xpArea = document.getElementById('xpGainArea');
-  xpArea.style.display = 'block';
-  const lv = RPG.getLevel(xpResult.after);
-  const xpForNext = RPG.getXPForNextLevel(lv);
-  const xpForCurrent = RPG.getXPForNextLevel(lv - 1);
-  const pct = Math.min(((xpResult.after - xpForCurrent) / (xpForNext - xpForCurrent)) * 100, 100);
-  setTimeout(() => document.getElementById('xpBarFill').style.width = `${pct}%`, 300);
+  const wrongPanel=document.getElementById('wrongPanel');
+  const wrongItems=reviewData.filter(r=>!r.isCorrect);
+  if (wrongItems.length) { wrongPanel.style.display='block'; document.getElementById('wrongCount').textContent=wrongItems.length; }
+  else wrongPanel.style.display='none';
 
-  if (xpResult.leveledUp) {
-    document.getElementById('levelUpText').style.display = 'block';
-    document.getElementById('levelUpText').textContent = `🎉 LEVEL UP! → Lv.${lv} ${RPG.getClass(lv)}`;
-  } else {
-    document.getElementById('levelUpText').style.display = 'none';
-  }
-
-  // 間違えた問題
-  const wrongActions = document.getElementById('wrongActions');
-  const wrongData = reviewData.filter(r => !r.isCorrect);
-  if (wrongData.length > 0) {
-    wrongActions.style.display = 'block';
-    document.getElementById('wrongCount').textContent = wrongData.length;
-  } else {
-    wrongActions.style.display = 'none';
-  }
-
-  // レビューリスト
-  const rList = document.getElementById('reviewList');
-  rList.innerHTML = '';
-  reviewData.forEach(r => {
-    const d = document.createElement('div');
-    d.style.cssText = 'padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:0.85rem;';
-    d.innerHTML = `
-      <div style="display:flex; justify-content:space-between">
-        <span>${r.year}年: ${r.event}</span>
-        <span style="color:${r.isCorrect ? 'var(--success)' : 'var(--error)'}">${r.isCorrect ? '○' : '×'}</span>
-      </div>
-      <div style="font-size:0.7rem; color:var(--text-muted)">回答: ${r.userAnswer || '未回答'}</div>
-    `;
+  const rList=document.getElementById('reviewList'); rList.innerHTML='';
+  reviewData.forEach(r=>{
+    const d=document.createElement('div');
+    d.style.cssText='padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:.82rem';
+    d.innerHTML=`<div style="display:flex;justify-content:space-between"><span>${r.year}年: ${r.event}</span><span style="color:${r.isCorrect?'var(--ok)':'var(--err)'}">${r.isCorrect?'○':'×'}</span></div><div style="font-size:.7rem;color:var(--txt3)">回答: ${r.userAnswer||'未回答'}</div>`;
     rList.appendChild(d);
   });
 }
 
-function showCertificate() {
-  const overlay = document.getElementById('certificateOverlay');
-  const now = new Date();
-  document.getElementById('certDate').textContent = `令和${now.getFullYear()-2018}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours()}時${now.getMinutes()}分`;
-  overlay.style.display = 'flex';
-  overlay.classList.add('active');
-}
-function closeCertificate() {
-  const o = document.getElementById('certificateOverlay');
-  o.classList.remove('active');
-  setTimeout(() => o.style.display = 'none', 400);
-}
-
-function startWrongOnlyQuiz() {
-  const wd = reviewData.filter(r => !r.isCorrect).map(w => ({ year: w.year, event: w.event }));
+function retryWrong() {
+  const wd=reviewData.filter(r=>!r.isCorrect).map(w=>({...w}));
   if (!wd.length) return;
-  QuizEngine.generate(null, currentQuizMode, 20, wd);
-  document.getElementById('battleLog').innerHTML = '<div class="log-entry">🔥 再戦！弱点克服に挑む！</div>';
-  UIController.showScreen('screen-quiz');
-  UIController.renderQuestion();
+  curMode=curMode; quizList=wd.map(item=>{let type=item.type; return {...item,type,pattern:type===1?'年号の試練':'出来事の試練'};});
+  quizIndex=0; quizScore=0; reviewData=[]; playerHP=5; maxHP=5;
+  document.getElementById('battleLog').innerHTML='<div>🔥 再戦！弱点克服！</div>';
+  showScreen('screen-battle'); renderQuestion();
 }
 
-function exportWrongData() {
-  const wd = reviewData.filter(r => !r.isCorrect).map(w => ({ year: w.year, event: w.event }));
+function exportWrong() {
+  const wd=reviewData.filter(r=>!r.isCorrect).map(w=>({year:w.year,event:w.event}));
   if (!wd.length) return;
-  const b = new Blob([JSON.stringify(wd, null, 2)], { type: 'application/json' });
-  const u = URL.createObjectURL(b);
-  const a = document.createElement('a'); a.href = u;
-  a.download = `weak-points-${new Date().toISOString().slice(0,10)}.json`;
-  a.click(); URL.revokeObjectURL(u);
-  showToast('💾 弱点リストを保存しました');
+  const blob=new Blob([JSON.stringify(wd,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=`weak-${new Date().toISOString().slice(0,10)}.json`; a.click();
+  URL.revokeObjectURL(url); showToast('💾 弱点リストを保存しました');
 }
 
-function goHome() { UIController.showScreen('screen-home'); }
+/* ================================================
+   Certificate
+================================================ */
+function showCert() {
+  const now=new Date();
+  document.getElementById('certName').textContent=`${currentProfile?.display_name||'冒険者'} 殿`;
+  document.getElementById('certDate').textContent=`令和${now.getFullYear()-2018}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours()}時${now.getMinutes()}分`;
+  const o=document.getElementById('certOverlay'); o.style.display='flex'; o.classList.add('active');
+}
+function closeCert() {
+  const o=document.getElementById('certOverlay'); o.classList.remove('active'); setTimeout(()=>o.style.display='none',400);
+}
+
+/* ================================================
+   UI helpers
+================================================ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  if (tab==='records') loadRecords();
+}
+function goHome() { showScreen('screen-main'); switchTab('quest'); }
 function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500);
 }
 
-// ---- Init ----
-document.addEventListener('DOMContentLoaded', () => {
-  UIController.renderDataList();
-  RPG.updateStatusBar();
-  document.getElementById('fileInput').addEventListener('change', e => processFiles(Array.from(e.target.files)));
+/* ================================================
+   Init
+================================================ */
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('fileInput').addEventListener('change', e=>processFiles(Array.from(e.target.files)));
   document.getElementById('importInput').addEventListener('change', importData);
-  document.getElementById('answerInput')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !document.getElementById('btnAnswer').style.display.includes('none')) checkAnswer();
+  document.getElementById('battleInput').addEventListener('keydown', e=>{
+    if (e.key==='Enter'&&document.getElementById('btnAttack').style.display!=='none') checkAnswer();
   });
 });

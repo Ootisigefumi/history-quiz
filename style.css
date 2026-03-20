@@ -1,343 +1,151 @@
-/* ===================================================
-   歴史クエスト - RPG風スタイルシート
-=================================================== */
-
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=DotGothic16&display=swap');
-
-:root {
-  --bg-primary: #0a0a1a;
-  --bg-panel: rgba(10, 15, 35, 0.92);
-  --border-panel: rgba(80, 120, 200, 0.35);
-  --gold: #ffd764;
-  --gold-dark: #c9a227;
-  --text-primary: #e8e0d0;
-  --text-secondary: #8a8070;
-  --text-muted: #5a5248;
-  --hp-green: #4caf50;
-  --hp-yellow: #ff9800;
-  --hp-red: #f44336;
-  --xp-blue: #42a5f5;
-  --quest-red: #c62828;
-  --quest-blue: #1565c0;
-  --quest-purple: #6a1b9a;
-  --success: #27ae60;
-  --error: #e74c3c;
-  --radius: 12px;
-  --radius-sm: 6px;
+:root{
+  --bg:#080818;--surface:rgba(255,255,255,0.04);--glass:rgba(15,15,40,0.75);
+  --border:rgba(100,130,255,0.18);--gold:#ffd764;--gold-d:#b8941e;
+  --blue:#60a5fa;--purple:#a78bfa;--red:#f87171;--green:#4ade80;
+  --txt:#e8e4d8;--txt2:#8a8070;--txt3:#4a4540;
+  --err:#ef4444;--ok:#22c55e;
+  --r:14px;--rs:8px;
 }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;overflow-x:hidden;line-height:1.7;-webkit-tap-highlight-color:transparent}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 120% 80% at 30% -20%,rgba(96,165,250,0.06),transparent 60%),radial-gradient(ellipse 100% 60% at 80% 110%,rgba(167,139,250,0.05),transparent 60%);pointer-events:none;z-index:0}
+.app{position:relative;z-index:1;max-width:680px;margin:0 auto;padding:0 14px 80px;padding-top:max(8px,env(safe-area-inset-top));min-height:100vh}
+.screen{display:none;animation:fadeIn .35s ease}.screen.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ---- Auth ---- */
+.auth-bg{position:fixed;inset:0;background:radial-gradient(circle at 50% 40%,rgba(96,165,250,0.1),transparent 60%);pointer-events:none}
+.auth-container{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.auth-logo{font-size:4rem;filter:drop-shadow(0 0 30px rgba(255,215,100,0.4));animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.auth-title{font-family:'DotGothic16',sans-serif;font-size:2.2rem;background:linear-gradient(180deg,#fff,var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:.12em;margin:8px 0 4px}
+.auth-sub{color:var(--txt2);font-size:.85rem;margin-bottom:28px}
+.auth-card{width:100%;max-width:380px;background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:24px;backdrop-filter:blur(20px)}
+.auth-tabs{display:flex;gap:4px;margin-bottom:20px;background:rgba(255,255,255,0.04);border-radius:var(--rs);padding:3px}
+.auth-tab{flex:1;padding:8px;border:none;background:transparent;color:var(--txt2);font-weight:700;font-size:.85rem;border-radius:var(--rs);cursor:pointer;font-family:inherit;transition:all .2s}
+.auth-tab.active{background:rgba(255,215,100,0.15);color:var(--gold)}
+.auth-input{width:100%;padding:12px 14px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:var(--rs);color:var(--txt);font-size:.9rem;outline:none;margin-bottom:12px;font-family:inherit;transition:border-color .2s}
+.auth-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(96,165,250,0.15)}
+.auth-input::placeholder{color:var(--txt3)}
+.auth-error{color:var(--err);font-size:.8rem;margin-top:8px;min-height:1.2em;text-align:center}
+.btn-gold{width:100%;padding:13px;border:none;border-radius:var(--rs);background:linear-gradient(135deg,var(--gold),var(--gold-d));color:#1a1400;font-weight:900;font-size:.95rem;cursor:pointer;font-family:inherit;transition:all .15s;box-shadow:0 4px 16px rgba(255,215,100,0.25)}
+.btn-gold:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(255,215,100,0.35)}
+.btn-gold:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-blue{padding:12px 24px;border:none;border-radius:var(--rs);background:linear-gradient(135deg,var(--blue),#3b82f6);color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:.9rem}
+.btn-sm{padding:8px 14px;border:1px solid var(--border);border-radius:var(--rs);background:rgba(255,255,255,0.05);color:var(--txt);font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-sm:hover{background:rgba(255,255,255,0.1)}.btn-red{border-color:rgba(239,68,68,0.3);color:var(--err)}
 
-body {
-  font-family: 'Noto Sans JP', sans-serif;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  min-height: 100vh;
-  overflow-x: hidden;
-  line-height: 1.7;
-  -webkit-tap-highlight-color: transparent;
-}
+/* ---- Header ---- */
+.main-header{display:flex;justify-content:space-between;align-items:center;padding:12px 2px;font-size:.82rem}
+.header-left{display:flex;gap:8px;align-items:center}
+.header-class{font-weight:700}
+.header-lv{background:linear-gradient(135deg,var(--gold),var(--gold-d));color:#1a1400;padding:2px 10px;border-radius:100px;font-weight:900;font-size:.7rem}
+.header-right{display:flex;gap:10px;align-items:center}
+.header-xp{color:var(--blue);font-weight:700}
+.header-btn{background:none;border:none;font-size:1.1rem;cursor:pointer;padding:4px}
+.xp-bar-wrap{height:3px;background:rgba(255,255,255,0.06);border-radius:100px;margin-bottom:14px;overflow:hidden}
+.xp-bar-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--purple));transition:width .8s ease;border-radius:100px}
 
-/* 背景：星空 */
-body::before {
-  content: '';
-  position: fixed; inset: 0;
-  background:
-    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.4), transparent),
-    radial-gradient(1px 1px at 30% 50%, rgba(255,255,255,0.3), transparent),
-    radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.5), transparent),
-    radial-gradient(1px 1px at 70% 70%, rgba(255,255,255,0.3), transparent),
-    radial-gradient(1px 1px at 90% 30%, rgba(255,255,255,0.4), transparent),
-    radial-gradient(1px 1px at 15% 80%, rgba(255,255,255,0.2), transparent),
-    radial-gradient(1px 1px at 85% 90%, rgba(255,255,255,0.3), transparent),
-    radial-gradient(ellipse 80% 60% at 50% 100%, rgba(40, 20, 80, 0.4) 0%, transparent 60%);
-  pointer-events: none; z-index: 0;
-}
+/* ---- Tabs ---- */
+.tab-nav{display:flex;gap:4px;background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:4px;margin-bottom:16px;backdrop-filter:blur(12px)}
+.tab{flex:1;padding:10px 8px;border:none;background:transparent;color:var(--txt2);font-weight:700;font-size:.82rem;border-radius:10px;cursor:pointer;font-family:inherit;transition:all .2s}
+.tab.active{background:rgba(96,165,250,0.12);color:var(--blue)}
+.tab-content{display:none;animation:fadeIn .3s ease}.tab-content.active{display:block}
 
-.app-container {
-  position: relative; z-index: 1;
-  max-width: 700px; margin: 0 auto;
-  padding: 0 14px 80px;
-  padding-top: max(8px, env(safe-area-inset-top));
-  padding-bottom: max(80px, env(safe-area-inset-bottom));
-  min-height: 100vh;
-}
+/* ---- Glass Card ---- */
+.glass-card{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:14px;backdrop-filter:blur(16px);box-shadow:0 4px 20px rgba(0,0,0,0.3)}
+.card-h{font-size:.9rem;font-weight:900;margin-bottom:12px;display:flex;align-items:center;gap:6px;color:var(--blue)}
+.card-h-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.badge-count{background:rgba(255,215,100,0.12);color:var(--gold);padding:2px 10px;border-radius:100px;font-size:.75rem;font-weight:900}
 
-/* ---- ステータスバー ---- */
-.status-bar {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 16px;
-  background: rgba(0,0,0,0.5);
-  border-bottom: 1px solid var(--border-panel);
-  border-radius: 0 0 var(--radius) var(--radius);
-  margin-bottom: 16px;
-  font-size: 0.8rem;
-  backdrop-filter: blur(8px);
-}
-.status-left { display: flex; gap: 10px; align-items: center; }
-.player-class { font-weight: 700; }
-.player-level {
-  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-  color: #1a1400; padding: 2px 10px; border-radius: 100px;
-  font-weight: 900; font-size: 0.7rem;
-}
-.xp-display { font-weight: 700; color: var(--xp-blue); }
+/* ---- Upload ---- */
+.upload-zone{border:2px dashed rgba(100,130,255,0.2);border-radius:var(--r);padding:28px 16px;text-align:center;position:relative;cursor:pointer;transition:border-color .2s}
+.upload-zone:hover{border-color:rgba(100,130,255,0.5)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.upload-zone span{font-size:2rem;display:block;margin-bottom:4px}
+.upload-zone p{font-size:.8rem;color:var(--txt2)}
+.ocr-wrap{display:none;margin-top:12px}.ocr-wrap.visible{display:block}
+.ocr-wrap p{font-size:.78rem;color:var(--txt2);margin-bottom:4px}
 
-/* ---- RPGタイトル ---- */
-.rpg-title { text-align: center; padding: 30px 0 24px; }
-.title-icon { font-size: 3.5rem; filter: drop-shadow(0 0 20px rgba(255,215,100,0.5)); animation: float 3s ease-in-out infinite; }
-@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-.rpg-title h1 {
-  font-family: 'DotGothic16', 'Noto Sans JP', sans-serif;
-  font-size: clamp(1.8rem, 5vw, 2.5rem);
-  background: linear-gradient(180deg, #fff 0%, var(--gold) 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  letter-spacing: 0.15em;
-}
-.title-sub { color: var(--text-secondary); font-size: 0.85rem; margin-top: 4px; }
+/* ---- Bars ---- */
+.bar-bg{background:rgba(255,255,255,0.08);height:6px;border-radius:100px;overflow:hidden}
+.bar-fill{height:100%;border-radius:100px;transition:width .4s ease;background:var(--gold)}
+.bar-enemy{background:var(--red)}.bar-player{background:var(--green)}
 
-/* ---- 画面切り替え ---- */
-.screen { display: none; animation: fadeSlideIn 0.4s ease; }
-.screen.active { display: block; }
-@keyframes fadeSlideIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+/* ---- Input ---- */
+.g-input{background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:var(--rs);color:var(--txt);padding:10px 12px;outline:none;font-size:.88rem;font-family:inherit;transition:border-color .2s,box-shadow .2s}
+.g-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(96,165,250,0.15)}
+.g-input::placeholder{color:var(--txt3)}
+.row-input{display:flex;gap:8px;align-items:center}
 
-/* ---- RPGパネル ---- */
-.rpg-panel {
-  background: var(--bg-panel);
-  border: 1px solid var(--border-panel);
-  border-radius: var(--radius);
-  margin-bottom: 14px;
-  overflow: hidden;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
-}
-.panel-header {
-  display: flex; align-items: center; gap: 8px;
-  padding: 12px 16px;
-  background: rgba(255,255,255,0.03);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  font-weight: 700; font-size: 0.9rem;
-}
-.panel-icon { font-size: 1.1rem; }
-.panel-body { padding: 16px; }
+/* ---- Data List ---- */
+.data-list{max-height:200px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.1) transparent}
+.d-item{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:.82rem}
+.d-year{background:var(--gold);color:#1a1400;font-weight:900;padding:1px 8px;border-radius:100px;font-size:.7rem;min-width:50px;text-align:center}
+.d-del{background:none;border:none;color:var(--txt3);cursor:pointer;font-size:.7rem;margin-left:auto}.d-del:hover{color:var(--err)}
+.empty-st{color:var(--txt3);text-align:center;padding:20px 0;font-size:.85rem}
 
-.data-count-badge {
-  margin-left: auto;
-  background: rgba(255,215,100,0.15); color: var(--gold);
-  padding: 2px 10px; border-radius: 100px; font-size: 0.75rem; font-weight: 700;
-}
+/* ---- Quest Cards ---- */
+.quest-grid{display:grid;gap:12px}
+.quest-card{display:flex;align-items:center;gap:16px;padding:18px 20px;border:1px solid;border-radius:var(--r);cursor:pointer;transition:all .2s;background:rgba(0,0,0,0.3);color:var(--txt);font-family:inherit;text-align:left}
+.quest-card:disabled{opacity:.3;cursor:not-allowed}
+.quest-card:not(:disabled):hover{transform:translateX(6px)}
+.qc-icon{font-size:2rem}.qc-name{font-weight:900;font-size:1rem;display:block}.qc-desc{font-size:.75rem;color:var(--txt2);display:block;margin-top:2px}
+.qc-red{border-color:rgba(248,113,113,0.3)}.qc-red:not(:disabled):hover{background:rgba(248,113,113,0.08)}
+.qc-blue{border-color:rgba(96,165,250,0.3)}.qc-blue:not(:disabled):hover{background:rgba(96,165,250,0.08)}
+.qc-purple{border-color:rgba(167,139,250,0.3)}.qc-purple:not(:disabled):hover{background:rgba(167,139,250,0.08)}
 
-/* ---- ボタン ---- */
-.rpg-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 12px 24px; border-radius: var(--radius-sm); border: 1px solid var(--border-panel);
-  font-size: 0.9rem; font-weight: 700; cursor: pointer;
-  font-family: 'Noto Sans JP', sans-serif;
-  background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
-  color: var(--text-primary);
-  transition: all 0.15s;
-}
-.rpg-btn:hover { background: rgba(255,255,255,0.12); transform: translateY(-1px); }
-.rpg-btn:active { transform: scale(0.97); }
-.rpg-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
-.btn-small { padding: 8px 14px; font-size: 0.8rem; }
-.btn-danger { border-color: rgba(231,76,60,0.4); color: var(--error); }
+/* ---- Stats ---- */
+.stats-row{display:flex;gap:10px}.stat-box{flex:1;text-align:center;padding:12px 0;background:rgba(255,255,255,0.03);border-radius:var(--rs)}
+.stat-n{display:block;font-size:1.6rem;font-weight:900;color:var(--gold)}.stat-l{display:block;font-size:.7rem;color:var(--txt2)}
+.records-list{max-height:300px;overflow-y:auto}.rec-item{padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:.82rem;display:flex;justify-content:space-between;align-items:center}
+.rec-mode{font-weight:700}.rec-score{font-weight:900}.rec-date{font-size:.7rem;color:var(--txt3)}.rec-perfect{color:var(--gold)}
 
-.btn-attack {
-  background: linear-gradient(180deg, #c62828 0%, #8e0000 100%);
-  border-color: #e53935; color: #fff;
-  box-shadow: 0 4px 12px rgba(198,40,40,0.4);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-}
-.btn-attack:hover { box-shadow: 0 6px 20px rgba(198,40,40,0.6); }
-.btn-next {
-  background: linear-gradient(180deg, #1565c0 0%, #0d47a1 100%);
-  border-color: #42a5f5; color: #fff;
-  box-shadow: 0 4px 12px rgba(21,101,192,0.4);
-}
+/* ---- Battle ---- */
+.battle-top{text-align:center;padding:20px 0 12px}
+.enemy-sprite{font-size:4.5rem;filter:drop-shadow(0 0 24px rgba(248,113,113,0.3));animation:bounce 2s ease-in-out infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.enemy-sprite.hit{animation:hit .4s ease}@keyframes hit{0%{filter:brightness(3)}50%{transform:translateX(-10px)}100%{transform:translateX(0)}}
+.enemy-sprite.dead{animation:die .6s ease forwards}@keyframes die{to{opacity:0;transform:scale(.3) rotate(20deg)}}
+.enemy-name{font-weight:900;margin-top:6px;font-size:1rem}
+.battle-card{margin-top:0}
+.battle-badge{font-size:.72rem;color:var(--gold);border:1px solid rgba(255,215,100,0.3);display:inline-block;padding:2px 10px;border-radius:100px;margin-bottom:10px}
+.battle-q{font-family:'DotGothic16',sans-serif;font-size:1.1rem;margin-bottom:14px;line-height:1.8}
+.battle-input{width:100%;margin-bottom:12px;font-size:1rem;padding:13px}
+.battle-btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.player-bar{display:flex;gap:10px;align-items:center;padding:12px 14px;margin-top:10px;background:var(--glass);border:1px solid var(--border);border-radius:var(--r);backdrop-filter:blur(12px)}
+.pb-avatar{font-size:1.8rem}.pb-info{flex:1}.pb-row{display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:3px}.pb-hp{color:var(--green);font-weight:700}
+.player-bar.shake{animation:shake .3s ease}@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.battle-log{margin-top:10px;padding:10px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.04);border-radius:var(--r);max-height:100px;overflow-y:auto;font-size:.78rem;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.08) transparent}
+.log-ok{color:var(--ok)}.log-ng{color:var(--err)}
 
-/* ---- アップロード ---- */
-.upload-zone {
-  border: 2px dashed rgba(80,120,200,0.3); border-radius: var(--radius);
-  padding: 32px 16px; text-align: center; position: relative; cursor: pointer;
-  transition: border-color 0.2s;
-}
-.upload-zone:hover { border-color: rgba(80,120,200,0.6); }
-.upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.upload-icon { font-size: 2rem; display: block; margin-bottom: 6px; }
-.upload-zone p { font-size: 0.85rem; color: var(--text-secondary); }
+/* ---- Result ---- */
+.result-hero{text-align:center;padding:28px 0 16px}
+.result-icon{font-size:3.5rem;animation:float 2s ease-in-out infinite}
+.result-title{font-family:'DotGothic16',sans-serif;font-size:2rem;letter-spacing:.08em;margin:6px 0}
+.result-title.win{color:var(--gold);text-shadow:0 0 20px rgba(255,215,100,0.4)}.result-title.lose{color:var(--err)}
+.result-sub{color:var(--txt2);font-size:.85rem}
+.result-stats{display:flex;gap:10px;justify-content:center;margin-bottom:14px}
+.rs-item{text-align:center;flex:1}.rs-val{display:block;font-size:1.8rem;font-weight:900}.rs-lbl{display:block;font-size:.7rem;color:var(--txt2)}.rs-bad{color:var(--err)}.rs-xp{color:var(--blue)}
+.lvup-area{text-align:center;padding:10px 0}.lvup-text{font-weight:900;font-size:1.1rem;color:var(--gold);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
 
-.ocr-progress-wrap { display: none; margin-top: 12px; }
-.ocr-progress-wrap.visible { display: block; }
-.ocr-status-text { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 6px; }
-.progress-bar-bg { background: rgba(255,255,255,0.08); border-radius: 100px; height: 6px; overflow: hidden; }
-.progress-bar-fill { height: 100%; background: var(--gold); width: 0%; transition: width 0.3s; border-radius: 100px; }
+/* ---- Certificate ---- */
+.cert-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px}
+.cert-overlay.active{display:flex}
+.cert-card{max-width:560px;width:100%;background:#fdfaf0;padding:20px;border-radius:4px;box-shadow:0 10px 40px rgba(0,0,0,0.5)}
+.cert-border{border:8px double #c9a227;padding:14px}
+.cert-inner{border:1px solid #c9a227;padding:28px 14px;text-align:center;color:#333}
+.cert-t{font-size:2.2rem;letter-spacing:.5em;margin-bottom:18px;color:#c9a227}
+.cert-name{font-size:1.2rem;border-bottom:1px solid #333;display:inline-block;padding:0 28px;margin-bottom:20px}
+.cert-body{font-size:.9rem;line-height:2.2;margin-bottom:16px}
+.cert-foot{margin-top:28px;display:flex;justify-content:space-between;align-items:flex-end;padding:0 8px}
+.cert-foot p{font-size:.8rem}
+.cert-stamp{width:60px;height:60px;border:3px solid #c0392b;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#c0392b;font-weight:900;font-size:1rem;transform:rotate(-15deg);opacity:.8}
 
-/* ---- 入力 ---- */
-.rpg-input {
-  background: rgba(0,0,0,0.3); border: 1px solid var(--border-panel);
-  border-radius: var(--radius-sm); color: var(--text-primary);
-  padding: 10px 12px; outline: none; font-size: 0.9rem;
-  font-family: 'Noto Sans JP', sans-serif;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.rpg-input:focus { border-color: var(--xp-blue); box-shadow: 0 0 0 3px rgba(66,165,245,0.2); }
-.rpg-input::placeholder { color: var(--text-muted); }
-.manual-input-row { display: flex; gap: 8px; }
+/* ---- Toast ---- */
+.toast{position:fixed;bottom:max(24px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(80px);background:var(--glass);padding:10px 22px;border-radius:100px;border:1px solid var(--border);transition:transform .3s;z-index:3000;font-size:.82rem;backdrop-filter:blur(12px)}
+.toast.show{transform:translateX(-50%) translateY(0)}
 
-/* ---- データリスト ---- */
-.data-list { max-height: 180px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
-.data-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.85rem;
-}
-.year-badge {
-  background: var(--gold); color: #1a1400; font-weight: 900;
-  padding: 1px 8px; border-radius: 100px; font-size: 0.7rem; min-width: 50px; text-align: center;
-}
-.delete-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.7rem; margin-left: auto; }
-.delete-btn:hover { color: var(--error); }
-.empty-state { color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 16px 0; }
-
-/* ---- クエスト選択 ---- */
-.quest-buttons { display: grid; gap: 10px; }
-.quest-btn {
-  display: flex; align-items: center; gap: 14px;
-  padding: 16px 18px; border: 1px solid; border-radius: var(--radius);
-  cursor: pointer; transition: all 0.2s;
-  background: rgba(0,0,0,0.3);
-  color: var(--text-primary); font-family: 'Noto Sans JP', sans-serif; text-align: left;
-}
-.quest-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-.quest-btn:not(:disabled):hover { transform: translateX(6px); }
-.quest-icon { font-size: 1.8rem; }
-.quest-label { font-weight: 900; font-size: 1rem; display: block; }
-.quest-desc { font-size: 0.75rem; color: var(--text-secondary); display: block; margin-top: 2px; }
-.quest-red { border-color: rgba(198,40,40,0.4); }
-.quest-red:not(:disabled):hover { background: rgba(198,40,40,0.15); }
-.quest-blue { border-color: rgba(21,101,192,0.4); }
-.quest-blue:not(:disabled):hover { background: rgba(21,101,192,0.15); }
-.quest-purple { border-color: rgba(106,27,154,0.4); }
-.quest-purple:not(:disabled):hover { background: rgba(106,27,154,0.15); }
-
-/* ===================================================
-   バトル画面
-=================================================== */
-.battle-enemy-area { text-align: center; padding: 24px 0 16px; }
-.enemy-sprite {
-  font-size: 5rem; display: block;
-  filter: drop-shadow(0 0 30px rgba(255,50,50,0.3));
-  animation: enemyBounce 2s ease-in-out infinite;
-}
-@keyframes enemyBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-.enemy-sprite.hit { animation: enemyHit 0.4s ease; }
-@keyframes enemyHit { 0%{filter:brightness(3)} 50%{transform:translateX(-12px)} 100%{transform:translateX(0);filter:brightness(1)} }
-.enemy-sprite.dead { animation: enemyDie 0.8s ease forwards; }
-@keyframes enemyDie { to { opacity:0; transform:scale(0.3) rotate(20deg); } }
-
-.enemy-name { font-weight: 900; font-size: 1.1rem; margin: 8px 0 6px; }
-.enemy-hp-bar { max-width: 300px; margin: 0 auto; background: rgba(255,255,255,0.1); height: 8px; border-radius: 100px; overflow: hidden; }
-.enemy-hp-fill { height: 100%; background: var(--hp-red); transition: width 0.4s ease; border-radius: 100px; }
-.enemy-hp-text { font-size: 0.7rem; color: var(--text-muted); }
-
-.quiz-question {
-  font-family: 'DotGothic16', 'Noto Sans JP', sans-serif;
-  font-size: 1.15rem; margin-bottom: 16px; line-height: 1.8;
-}
-.quiz-pattern-badge { font-size: 0.75rem; color: var(--gold); }
-.answer-input { width: 100%; margin-bottom: 12px; font-size: 1.05rem; padding: 14px; }
-
-.battle-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-
-/* プレイヤーHP */
-.player-hp-area {
-  display: flex; gap: 12px; align-items: center;
-  padding: 14px 16px; margin-top: 12px;
-  background: var(--bg-panel); border: 1px solid var(--border-panel);
-  border-radius: var(--radius);
-}
-.player-avatar { font-size: 2rem; }
-.player-name-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px; }
-.player-hp-text { color: var(--hp-green); font-weight: 700; }
-.player-hp-bar { background: rgba(255,255,255,0.1); height: 8px; border-radius: 100px; overflow: hidden; }
-.player-hp-fill { height: 100%; background: var(--hp-green); transition: width 0.4s ease; border-radius: 100px; }
-
-.player-hp-area.damaged { animation: playerDamage 0.3s ease; }
-@keyframes playerDamage { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
-
-/* バトルログ */
-.battle-log {
-  margin-top: 12px; padding: 12px 16px; font-size: 0.8rem;
-  background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06);
-  border-radius: var(--radius); max-height: 120px; overflow-y: auto;
-  scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent;
-}
-.log-entry { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
-.log-correct { color: var(--success); }
-.log-wrong { color: var(--error); }
-
-/* ===================================================
-   結果画面
-=================================================== */
-.result-banner { text-align: center; padding: 32px 0 20px; }
-.result-icon { font-size: 4rem; animation: float 2s ease-in-out infinite; }
-.result-title {
-  font-family: 'DotGothic16', 'Noto Sans JP', sans-serif;
-  font-size: 2.2rem; letter-spacing: 0.1em; margin: 8px 0;
-}
-.result-title.victory { color: var(--gold); text-shadow: 0 0 20px rgba(255,215,100,0.5); }
-.result-title.defeat { color: var(--error); }
-.result-sub { color: var(--text-secondary); }
-
-.result-stats { display: flex; gap: 12px; justify-content: center; margin-bottom: 16px; }
-.stat-item { text-align: center; flex: 1; }
-.stat-label { display: block; font-size: 0.75rem; color: var(--text-muted); }
-.stat-value { display: block; font-size: 1.8rem; font-weight: 900; }
-.stat-bad { color: var(--error); }
-.stat-xp { color: var(--xp-blue); }
-
-.xp-gain-bar { margin-top: 16px; }
-.xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--xp-blue), #7e57c2); transition: width 1s ease; border-radius: 100px; }
-.level-up-text {
-  text-align: center; margin-top: 8px; font-weight: 900; font-size: 1.1rem;
-  color: var(--gold); animation: pulseGold 1s infinite;
-}
-
-/* ---- 賞状 ---- */
-.certificate-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
-  z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px;
-}
-.certificate-overlay.active { display: flex; }
-.certificate-card { max-width: 600px; width: 100%; background: #fdfaf0; padding: 24px; border-radius: 4px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
-.cert-border { border: 10px double #c9a227; padding: 16px; }
-.cert-content { border: 1px solid #c9a227; padding: 32px 16px; text-align: center; color: #333; }
-.cert-title { font-family: 'Noto Sans JP', serif; font-size: 2.5rem; letter-spacing: 0.5em; margin-bottom: 20px; color: #c9a227; }
-.cert-name { font-size: 1.3rem; border-bottom: 1px solid #333; display: inline-block; padding: 0 32px; margin-bottom: 24px; }
-.cert-body { font-size: 1rem; line-height: 2.2; margin-bottom: 20px; }
-.cert-footer { margin-top: 32px; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 12px; }
-.cert-date { font-size: 0.85rem; }
-.cert-stamp {
-  width: 70px; height: 70px; border: 3px solid #c0392b; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  color: #c0392b; font-weight: 900; font-size: 1.1rem; transform: rotate(-15deg); opacity: 0.8;
-}
-
-/* ---- トースト ---- */
-.toast {
-  position: fixed; bottom: max(24px, env(safe-area-inset-bottom));
-  left: 50%; transform: translateX(-50%) translateY(100px);
-  background: var(--bg-panel); padding: 10px 22px; border-radius: 100px;
-  border: 1px solid var(--border-panel); transition: transform 0.3s; z-index: 1000;
-  font-size: 0.85rem; backdrop-filter: blur(8px);
-}
-.toast.show { transform: translateX(-50%) translateY(0); }
-
-/* ---- アニメーション共通 ---- */
-.score-circle.perfect { animation: pulseGold 1.5s infinite; }
-@keyframes pulseGold { 0%{transform:scale(1)} 50%{transform:scale(1.05)} 100%{transform:scale(1)} }
-
-@media (max-width: 480px) {
-  .manual-input-row { flex-direction: column; }
-  .cert-title { font-size: 1.8rem; }
-  .result-title { font-size: 1.6rem; }
-}
+@media(max-width:480px){.row-input{flex-wrap:wrap}.g-input[style*="width:90px"]{width:100%!important}.cert-t{font-size:1.6rem}.result-title{font-size:1.5rem}}

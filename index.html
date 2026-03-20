@@ -5,261 +5,240 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="theme-color" content="#0a0a1a" />
+  <meta name="theme-color" content="#080818" />
   <title>歴史クエスト | RPG学習アプリ</title>
-  <meta name="description" content="歴史年表をRPGバトルで学ぶ！モンスターを倒して歴史マスターを目指そう。" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon.png" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+<div class="app" id="app">
 
-<div class="app-container">
+  <!-- ===== ログイン画面 ===== -->
+  <section id="screen-auth" class="screen active">
+    <div class="auth-bg"></div>
+    <div class="auth-container">
+      <div class="auth-logo">⚔️</div>
+      <h1 class="auth-title">歴史クエスト</h1>
+      <p class="auth-sub">〜 年表の迷宮を攻略せよ 〜</p>
 
-  <!-- ===== ステータスバー（常時表示） ===== -->
-  <div class="status-bar" id="statusBar">
-    <div class="status-left">
-      <span class="player-class" id="playerClass">🗡️ 見習い剣士</span>
-      <span class="player-level" id="playerLevel">Lv.1</span>
-    </div>
-    <div class="status-right">
-      <span class="xp-display">⭐ <span id="totalXP">0</span> XP</span>
-    </div>
-  </div>
+      <div class="auth-card" id="authCard">
+        <div class="auth-tabs">
+          <button class="auth-tab active" onclick="switchAuthTab('login')">ログイン</button>
+          <button class="auth-tab" onclick="switchAuthTab('signup')">新規登録</button>
+        </div>
 
-  <!-- ===================================================
-       ホーム画面（ギルド）
-  =================================================== -->
-  <section id="screen-home" class="screen active">
+        <form id="loginForm" onsubmit="handleLogin(event)">
+          <input type="email" id="loginEmail" class="auth-input" placeholder="メールアドレス" required />
+          <input type="password" id="loginPassword" class="auth-input" placeholder="パスワード" required />
+          <button type="submit" class="btn-gold" id="loginBtn">冒険を始める</button>
+        </form>
 
-    <div class="rpg-title">
-      <div class="title-icon">⚔️</div>
-      <h1>歴史クエスト</h1>
-      <p class="title-sub">〜 年表の迷宮を攻略せよ 〜</p>
-    </div>
+        <form id="signupForm" style="display:none" onsubmit="handleSignup(event)">
+          <input type="text" id="signupName" class="auth-input" placeholder="冒険者の名前" required />
+          <input type="email" id="signupEmail" class="auth-input" placeholder="メールアドレス" required />
+          <input type="password" id="signupPassword" class="auth-input" placeholder="パスワード（6文字以上）" required minlength="6" />
+          <button type="submit" class="btn-gold" id="signupBtn">登録して冒険へ</button>
+        </form>
 
-    <!-- ギルド：データ管理 -->
-    <div class="rpg-panel">
-      <div class="panel-header">
-        <span class="panel-icon">📜</span>
-        <span>冒険の書（データ管理）</span>
+        <p class="auth-error" id="authError"></p>
       </div>
-      <div class="panel-body">
+    </div>
+  </section>
+
+  <!-- ===== メイン画面 ===== -->
+  <section id="screen-main" class="screen">
+
+    <!-- ヘッダー -->
+    <header class="main-header">
+      <div class="header-left">
+        <span class="header-class" id="headerClass">🗡️ 見習い剣士</span>
+        <span class="header-lv" id="headerLv">Lv.1</span>
+      </div>
+      <div class="header-right">
+        <span class="header-xp">⭐ <span id="headerXP">0</span></span>
+        <button class="header-btn" onclick="logout()" title="ログアウト">🚪</button>
+      </div>
+    </header>
+
+    <!-- XPバー -->
+    <div class="xp-bar-wrap">
+      <div class="xp-bar-fill" id="headerXPBar" style="width:0%"></div>
+    </div>
+
+    <!-- タブナビ -->
+    <nav class="tab-nav">
+      <button class="tab active" onclick="switchTab('guild')" data-tab="guild">🏰 ギルド</button>
+      <button class="tab" onclick="switchTab('quest')" data-tab="quest">⚔️ クエスト</button>
+      <button class="tab" onclick="switchTab('records')" data-tab="records">📜 記録</button>
+    </nav>
+
+    <!-- ギルド（データ管理）タブ -->
+    <div class="tab-content active" id="tab-guild">
+      <div class="glass-card">
+        <h3 class="card-h">📷 巻物をアップロード</h3>
         <div class="upload-zone" id="uploadZone">
-          <input type="file" id="fileInput" accept="image/jpeg,image/png,image/jpg,application/pdf" multiple />
-          <span class="upload-icon">🗺️</span>
-          <p>年表の巻物をドロップ（画像 / PDF）</p>
+          <input type="file" id="fileInput" accept="image/*,application/pdf" multiple />
+          <span>🗺️</span>
+          <p>画像 / PDF をドロップ</p>
         </div>
-        <div class="ocr-progress-wrap" id="ocrProgressWrap">
-          <p class="ocr-status-text" id="ocrStatusText">解読中...</p>
-          <div class="progress-bar-bg"><div class="progress-bar-fill" id="ocrProgressBar"></div></div>
+        <div class="ocr-wrap" id="ocrWrap">
+          <p id="ocrStatus">解読中...</p>
+          <div class="bar-bg"><div class="bar-fill" id="ocrBar"></div></div>
         </div>
-        <div class="manual-input-row" style="margin-top:12px;">
-          <input type="number" id="manualYear" class="rpg-input" placeholder="年号" style="width:80px" />
-          <input type="text" id="manualEvent" class="rpg-input" placeholder="出来事を記す..." style="flex:1" />
-          <button class="rpg-btn btn-small" onclick="manualAdd()">＋記録</button>
+      </div>
+
+      <div class="glass-card">
+        <h3 class="card-h">✏️ 手動で追加</h3>
+        <div class="row-input">
+          <input type="number" id="manualYear" class="g-input" placeholder="年号" style="width:90px" />
+          <input type="text" id="manualEvent" class="g-input" placeholder="出来事" style="flex:1" />
+          <button class="btn-sm" onclick="manualAdd()">追加</button>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="card-h-row">
+          <h3 class="card-h" style="margin:0">📚 知識の書庫</h3>
+          <span class="badge-count" id="dataCount">0</span>
+        </div>
+        <div class="data-list" id="dataList"></div>
+        <div class="row-input" style="margin-top:10px">
+          <button class="btn-sm" style="flex:1" onclick="exportData()">💾 保存</button>
+          <label class="btn-sm" style="flex:1;text-align:center;cursor:pointer">📂 読込<input type="file" id="importInput" accept=".json" style="display:none" /></label>
+          <button class="btn-sm btn-red" onclick="clearAllData()">🗑️</button>
         </div>
       </div>
     </div>
 
-    <!-- モンスター図鑑（データリスト） -->
-    <div class="rpg-panel">
-      <div class="panel-header">
-        <span class="panel-icon">📚</span>
-        <span>知識の書庫</span>
-        <span class="data-count-badge"><span id="dataCount">0</span> 件</span>
-      </div>
-      <div class="panel-body">
-        <div class="data-list" id="dataList">
-          <div class="empty-state">まだ知識がありません。巻物をアップロードしましょう。</div>
-        </div>
-        <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
-          <button class="rpg-btn btn-small" style="flex:1" onclick="exportData()">💾 バックアップ</button>
-          <label class="rpg-btn btn-small" style="flex:1; cursor:pointer; text-align:center;">
-            📂 読み込み
-            <input type="file" id="importInput" accept=".json" style="display:none" />
-          </label>
-          <button class="rpg-btn btn-small btn-danger" onclick="clearAllData()">🗑️</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- クエスト選択 -->
-    <div class="rpg-panel quest-select">
-      <div class="panel-header">
-        <span class="panel-icon">⚔️</span>
-        <span>クエストを選択</span>
-      </div>
-      <div class="panel-body quest-buttons">
-        <button class="quest-btn quest-red" id="btnStartMode1" onclick="startQuiz('yearToEvent')" disabled>
-          <span class="quest-icon">📅</span>
-          <span class="quest-label">年号の試練</span>
-          <span class="quest-desc">年号から出来事を当てよ</span>
+    <!-- クエスト選択タブ -->
+    <div class="tab-content" id="tab-quest">
+      <div class="quest-grid">
+        <button class="quest-card qc-red" id="btnQ1" onclick="startQuiz('yearToEvent')" disabled>
+          <span class="qc-icon">📅</span>
+          <span class="qc-name">年号の試練</span>
+          <span class="qc-desc">年号 → 出来事</span>
         </button>
-        <button class="quest-btn quest-blue" id="btnStartMode2" onclick="startQuiz('eventToYear')" disabled>
-          <span class="quest-icon">⚔️</span>
-          <span class="quest-label">出来事の試練</span>
-          <span class="quest-desc">出来事から年号を当てよ</span>
+        <button class="quest-card qc-blue" id="btnQ2" onclick="startQuiz('eventToYear')" disabled>
+          <span class="qc-icon">⚔️</span>
+          <span class="qc-name">出来事の試練</span>
+          <span class="qc-desc">出来事 → 年号</span>
         </button>
-        <button class="quest-btn quest-purple" id="btnStartMode3" onclick="startQuiz('random')" disabled>
-          <span class="quest-icon">🎲</span>
-          <span class="quest-label">混沌の迷宮</span>
-          <span class="quest-desc">ランダム出題で腕試し</span>
+        <button class="quest-card qc-purple" id="btnQ3" onclick="startQuiz('random')" disabled>
+          <span class="qc-icon">🎲</span>
+          <span class="qc-name">混沌の迷宮</span>
+          <span class="qc-desc">ランダム出題</span>
         </button>
       </div>
     </div>
 
+    <!-- 記録タブ -->
+    <div class="tab-content" id="tab-records">
+      <div class="glass-card">
+        <h3 class="card-h">📊 統計</h3>
+        <div class="stats-row">
+          <div class="stat-box"><span class="stat-n" id="statTotal">0</span><span class="stat-l">総クエスト</span></div>
+          <div class="stat-box"><span class="stat-n" id="statPerfect">0</span><span class="stat-l">満点回数</span></div>
+          <div class="stat-box"><span class="stat-n" id="statTotalXP">0</span><span class="stat-l">総XP</span></div>
+        </div>
+      </div>
+      <div class="glass-card">
+        <h3 class="card-h">🕐 最近の冒険</h3>
+        <div id="recordsList" class="records-list"></div>
+      </div>
+    </div>
   </section>
 
-  <!-- ===================================================
-       バトル画面（クイズ）
-  =================================================== -->
-  <section id="screen-quiz" class="screen">
-
-    <!-- 敵情報 -->
-    <div class="battle-enemy-area">
-      <div class="enemy-sprite" id="enemySprite">👹</div>
-      <div class="enemy-name" id="enemyName">歴史の番人</div>
-      <div class="enemy-hp-bar">
-        <div class="enemy-hp-fill" id="enemyHpFill" style="width:100%"></div>
-      </div>
-      <span class="enemy-hp-text" id="enemyHpText">HP 10/10</span>
-    </div>
-
-    <!-- クイズカード（バトルコマンド） -->
-    <div class="battle-command-area">
-      <div class="rpg-panel" style="margin:0">
-        <div class="panel-header">
-          <span class="panel-icon">❓</span>
-          <span class="quiz-pattern-badge" id="quizPatternBadge">年号の試練</span>
-          <span style="margin-left:auto; font-size:0.75rem; color:var(--text-muted)" id="quizProgressText">1 / 10</span>
-        </div>
-        <div class="panel-body">
-          <p class="quiz-question" id="quizQuestion"></p>
-          <div class="answer-area">
-            <input type="text" class="rpg-input answer-input" id="answerInput" placeholder="答えを入力..." autocomplete="off" />
-          </div>
-          <div class="battle-actions">
-            <button class="rpg-btn btn-attack" id="btnAnswer" onclick="checkAnswer()">⚔️ 攻撃（回答）</button>
-            <button class="rpg-btn btn-next" id="btnNext" onclick="nextQuestion()" style="display:none">➡️ 次へ進む</button>
-            <button class="rpg-btn btn-small" style="margin-left:auto" onclick="goHome()">🏠 撤退</button>
-          </div>
-        </div>
+  <!-- ===== バトル画面 ===== -->
+  <section id="screen-battle" class="screen">
+    <div class="battle-top">
+      <div class="enemy-area">
+        <div class="enemy-sprite" id="enemySprite">👹</div>
+        <div class="enemy-name" id="enemyName">年号ゴブリン</div>
+        <div class="bar-bg" style="max-width:240px;margin:6px auto 0"><div class="bar-fill bar-enemy" id="enemyHP" style="width:100%"></div></div>
       </div>
     </div>
 
-    <!-- プレイヤーHP -->
-    <div class="player-hp-area">
-      <div class="player-avatar">🛡️</div>
-      <div style="flex:1">
-        <div class="player-name-row">
-          <span id="playerNameBattle">見習い剣士</span>
-          <span class="player-hp-text" id="playerHpText">HP <span id="playerHpVal">5</span>/5</span>
-        </div>
-        <div class="player-hp-bar">
-          <div class="player-hp-fill" id="playerHpFill" style="width:100%"></div>
-        </div>
+    <div class="glass-card battle-card">
+      <div class="battle-badge" id="battleBadge">年号の試練</div>
+      <p class="battle-q" id="battleQ"></p>
+      <input type="text" class="g-input battle-input" id="battleInput" placeholder="答えを入力..." autocomplete="off" />
+      <div class="battle-btns">
+        <button class="btn-gold" id="btnAttack" onclick="checkAnswer()">⚔️ 攻撃</button>
+        <button class="btn-blue" id="btnNext" onclick="nextQuestion()" style="display:none">➡️ 次へ</button>
+        <button class="btn-sm" style="margin-left:auto" onclick="goHome()">撤退</button>
       </div>
     </div>
 
-    <!-- バトルログ -->
+    <div class="player-bar">
+      <span class="pb-avatar">🛡️</span>
+      <div class="pb-info">
+        <div class="pb-row"><span id="pbName">見習い剣士</span><span class="pb-hp" id="pbHP">HP 5/5</span></div>
+        <div class="bar-bg"><div class="bar-fill bar-player" id="playerHPBar" style="width:100%"></div></div>
+      </div>
+    </div>
+
     <div class="battle-log" id="battleLog"></div>
-
   </section>
 
-  <!-- ===================================================
-       結果画面（戦闘結果）
-  =================================================== -->
-  <section id="screen-score" class="screen">
-
-    <div class="result-banner" id="resultBanner">
-      <div class="result-icon" id="resultIcon">🏆</div>
-      <h2 class="result-title" id="resultTitle">VICTORY!</h2>
-      <p class="result-sub" id="resultSub"></p>
+  <!-- ===== 結果画面 ===== -->
+  <section id="screen-result" class="screen">
+    <div class="result-hero" id="resultHero">
+      <div class="result-icon" id="rIcon">🏆</div>
+      <h2 class="result-title" id="rTitle">VICTORY!</h2>
+      <p class="result-sub" id="rSub"></p>
     </div>
 
-    <div class="rpg-panel">
-      <div class="panel-header"><span class="panel-icon">📊</span><span>戦闘結果</span></div>
-      <div class="panel-body">
-        <div class="result-stats">
-          <div class="stat-item"><span class="stat-label">正解数</span><span class="stat-value" id="statCorrect">0</span></div>
-          <div class="stat-item"><span class="stat-label">不正解</span><span class="stat-value stat-bad" id="statWrong">0</span></div>
-          <div class="stat-item"><span class="stat-label">獲得XP</span><span class="stat-value stat-xp" id="statXP">+0</span></div>
-        </div>
-
-        <div class="xp-gain-bar" id="xpGainArea" style="display:none">
-          <p style="font-size:0.8rem; margin-bottom:6px;">経験値</p>
-          <div class="progress-bar-bg"><div class="xp-bar-fill" id="xpBarFill" style="width:0%"></div></div>
-          <p class="level-up-text" id="levelUpText" style="display:none">🎉 LEVEL UP!</p>
-        </div>
+    <div class="glass-card">
+      <div class="result-stats">
+        <div class="rs-item"><span class="rs-val" id="rsCorrect">0</span><span class="rs-lbl">正解</span></div>
+        <div class="rs-item"><span class="rs-val rs-bad" id="rsWrong">0</span><span class="rs-lbl">不正解</span></div>
+        <div class="rs-item"><span class="rs-val rs-xp" id="rsXP">+0</span><span class="rs-lbl">XP</span></div>
+      </div>
+      <div id="lvUpArea" style="display:none" class="lvup-area">
+        <p class="lvup-text" id="lvUpText">🎉 LEVEL UP!</p>
       </div>
     </div>
 
-    <!-- 間違えた問題アクション -->
-    <div class="rpg-panel" id="wrongActions" style="display:none">
-      <div class="panel-header"><span class="panel-icon">💀</span><span>倒せなかった敵 (<span id="wrongCount">0</span>体)</span></div>
-      <div class="panel-body">
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="rpg-btn btn-attack" style="flex:1" onclick="startWrongOnlyQuiz()">🔥 再戦する</button>
-          <button class="rpg-btn btn-small" style="flex:1" onclick="exportWrongData()">💾 弱点リスト保存</button>
-        </div>
+    <div class="glass-card" id="wrongPanel" style="display:none">
+      <h3 class="card-h" style="color:var(--err)">💀 倒せなかった敵 (<span id="wrongCount">0</span>)</h3>
+      <div class="row-input">
+        <button class="btn-gold" style="flex:1" onclick="retryWrong()">🔥 再戦</button>
+        <button class="btn-sm" style="flex:1" onclick="exportWrong()">💾 保存</button>
       </div>
     </div>
 
-    <div class="rpg-panel">
-      <div class="panel-header"><span class="panel-icon">📝</span><span>戦闘記録</span></div>
-      <div class="panel-body"><div id="reviewList"></div></div>
-    </div>
+    <div class="glass-card"><h3 class="card-h">📝 戦闘記録</h3><div id="reviewList"></div></div>
 
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
-      <button class="rpg-btn" style="flex:1" onclick="startQuiz(currentQuizMode)">🔁 再挑戦</button>
-      <button class="rpg-btn btn-small" style="flex:1" onclick="goHome()">🏠 ギルドに戻る</button>
+    <div class="row-input" style="margin-top:10px">
+      <button class="btn-gold" style="flex:1" onclick="startQuiz(curMode)">🔁 再挑戦</button>
+      <button class="btn-sm" style="flex:1" onclick="goHome()">🏰 ギルドへ</button>
     </div>
-
   </section>
 
-</div>
-
-<!-- 賞状オーバーレイ -->
-<div id="certificateOverlay" class="certificate-overlay">
-  <div class="certificate-card">
-    <div class="cert-border">
-      <div class="cert-content">
-        <h2 class="cert-title">賞 状</h2>
-        <p class="cert-name">歴史の勇者 殿</p>
-        <p class="cert-body">
-          あなたは「歴史クエスト」において<br>
-          すべての敵を完璧に討伐し<br>
-          極めて優秀な成績を収められました
-        </p>
-        <p class="cert-body">
-          よってここにその栄誉を称え<br>
-          満点合格を証します
-        </p>
-        <div class="cert-footer">
-          <p class="cert-date" id="certDate"></p>
-          <div class="cert-stamp">合 格</div>
-        </div>
-      </div>
-    </div>
-    <div style="text-align:center; margin-top:20px;">
-      <button class="rpg-btn" onclick="closeCertificate()">閉じる</button>
+  <!-- 賞状 -->
+  <div id="certOverlay" class="cert-overlay">
+    <div class="cert-card">
+      <div class="cert-border"><div class="cert-inner">
+        <h2 class="cert-t">賞 状</h2>
+        <p class="cert-name" id="certName">冒険者 殿</p>
+        <p class="cert-body">あなたは「歴史クエスト」において<br>すべての敵を完璧に討伐し<br>極めて優秀な成績を収められました</p>
+        <p class="cert-body">よってここにその栄誉を称え<br>満点合格を証します</p>
+        <div class="cert-foot"><p id="certDate"></p><div class="cert-stamp">合格</div></div>
+      </div></div>
+      <div style="text-align:center;margin-top:16px"><button class="btn-sm" onclick="closeCert()">閉じる</button></div>
     </div>
   </div>
+
 </div>
 
 <div class="toast" id="toast"></div>
 
-<!-- ライブラリ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script>
-  if (typeof pdfjsLib !== 'undefined') {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  }
-</script>
+<script>if(typeof pdfjsLib!=='undefined')pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="app.js"></script>
-
 </body>
 </html>
