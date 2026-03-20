@@ -174,27 +174,40 @@ function switchAuthTab(tab) {
   document.querySelector(`.auth-tab:${tab==='login'?'first':'last'}-child`).classList.add('active');
   document.getElementById('authError').textContent = '';
 }
+// グローバルエラー捕捉
+window.onerror = function(msg, url, lineNo, columnNo, error) {
+  const errText = `[JS Error] ${msg} at line ${lineNo}`;
+  console.error(errText, error);
+  showToast('❌ プログラムエラー: ' + msg);
+  return false;
+};
+
 async function handleLogin(e) {
   e.preventDefault();
   const btn = document.getElementById('loginBtn');
   const err = document.getElementById('authError');
-  btn.disabled = true; btn.textContent = '接続中...';
+  btn.disabled = true; btn.textContent = '通信中...';
   err.textContent = '';
   
-  const email = document.getElementById('loginEmail').value;
-  const password = document.getElementById('loginPassword').value;
-  
-  console.log('ログイン試行:', email);
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-  
-  if (error) {
-    console.error('ログインエラー:', error);
-    err.style.color = 'var(--err)';
-    // 400エラーはパスワード間違い、それ以外はシステムエラーの可能性
-    err.textContent = 'ログイン失敗: ' + (error.status === 400 ? 'メールアドレスまたはパスワードが違います' : error.message);
+  try {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    
+    console.log('ログイン開始:', email);
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    
+    if (error) {
+      console.error('ログイン失敗:', error);
+      err.style.color = 'var(--err)';
+      err.textContent = 'ログイン失敗: ' + (error.status === 400 ? 'パスワードまたはメールが違います' : error.message);
+      btn.disabled = false; btn.textContent = '冒険を始める';
+    } else {
+      console.log('ログイン成功 OK!', data?.user?.id);
+    }
+  } catch (ex) {
+    console.error('ログイン処理中に例外:', ex);
+    err.textContent = 'システムエラーが発生しました';
     btn.disabled = false; btn.textContent = '冒険を始める';
-  } else {
-    console.log('ログイン成功!', data.user.id);
   }
 }
 
@@ -205,36 +218,45 @@ async function handleSignup(e) {
   btn.disabled = true; btn.textContent = '登録中...';
   err.textContent = '';
 
-  const name = document.getElementById('signupName').value;
-  const email = document.getElementById('signupEmail').value;
-  const password = document.getElementById('signupPassword').value;
-  
-  console.log('新規登録試行:', email);
-  const { data, error } = await sb.auth.signUp({
-    email, password,
-    options: { data: { display_name: name } }
-  });
-  
-  if (error) {
-    console.error('登録エラー:', error);
-    err.style.color = 'var(--err)';
-    err.textContent = '登録失敗: ' + error.message;
-  } else {
-    console.log('登録成功!', data);
-    err.style.color = 'var(--ok)';
-    // すでに登録済みの場合、Supabaseのセキュリティ設定によってはエラーにならず空のidentitiesが返る
-    if (data.user && data.user.identities && data.user.identities.length === 0) {
-      err.textContent = '⚠️ このメールアドレスは既に登録されています。ログインをお試しください。';
+  try {
+    const name = document.getElementById('signupName').value.trim();
+    const email = document.getElementById('signupEmail').value.trim();
+    const password = document.getElementById('signupPassword').value;
+    
+    console.log('新規登録開始:', email);
+    const { data, error } = await sb.auth.signUp({
+      email, password,
+      options: { data: { display_name: name } }
+    });
+    
+    if (error) {
+      console.error('登録失敗:', error);
+      err.style.color = 'var(--err)';
+      err.textContent = '登録失敗: ' + error.message;
     } else {
-      err.textContent = '✅ 登録完了！メールを確認して認証するか、そのままログインをお試しください。';
+      console.log('登録完了 OK!', data);
+      err.style.color = 'var(--ok)';
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        err.textContent = '⚠️ すでに登録されています。ログインへお進みください。';
+      } else {
+        err.textContent = '✅ 登録完了！そのままログインしてみてください。';
+      }
     }
+  } catch (ex) {
+    console.error('登録処理中に例外:', ex);
+    err.textContent = 'システムエラーが発生しました';
   }
   btn.disabled = false; btn.textContent = '登録して冒険へ';
 }
 
 async function logout() { 
-  console.log('ログアウト実行');
-  await sb.auth.signOut(); 
+  try {
+    console.log('ログアウト開始');
+    await sb.auth.signOut(); 
+    location.reload();
+  } catch (ex) {
+    console.error('ログアウト失敗:', ex);
+  }
 }
 
 /* ================================================
