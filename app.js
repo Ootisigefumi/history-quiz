@@ -195,9 +195,9 @@ async function handleLogin(e) {
     
     console.log('ログイン開始:', email);
     
-    // 10秒でタイムアウトさせるPromise
+    // 20秒でタイムアウトさせるPromise
     const timeout = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('通信タイムアウト：サーバーからの応答がありません。ネットワーク設定や広告ブロックを確認してください。')), 10000)
+      setTimeout(() => reject(new Error('通信タイムアウト：サーバーからの応答が遅れています。ネットワーク状況を確認するか、シークレットモードでお試しください。')), 20000)
     );
 
     // ログイン処理とタイムアウトの早い方を取る
