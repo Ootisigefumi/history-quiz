@@ -1,11 +1,21 @@
-'use strict';
-
 /* ================================================
    Supabase 初期化
 ================================================ */
 const SUPABASE_URL = 'https://utjtlrmvleagdypcnfky.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0anRscm12bGVhZ2R5cGNuZmt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5ODgzNTksImV4cCI6MjA4OTU2NDM1OX0.CoE2ZNMHZGaVBjsq28uAMt0bRg4RzfNtDiOKcH8huOM';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let sb = null;
+try {
+  if (typeof supabase === 'undefined') {
+    console.error('Supabase library not loaded!');
+    alert('❌ Supabaseライブラリを読み込めませんでした。ネット接続を確認するか、リロードしてください。');
+  } else {
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('Supabase Client Initialized.');
+  }
+} catch (e) {
+  console.error('Supabase init error:', e);
+}
 
 let currentUser = null;
 let currentProfile = null;
