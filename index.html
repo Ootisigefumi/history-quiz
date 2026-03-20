@@ -113,23 +113,26 @@
 
     <!-- クエスト選択タブ -->
     <div class="tab-content" id="tab-quest">
-      <div class="quest-grid">
-        <button class="quest-card qc-red" id="btnQ1" onclick="startQuiz('yearToEvent')" disabled>
-          <span class="qc-icon">📅</span>
-          <span class="qc-name">年号の試練</span>
-          <span class="qc-desc">年号 → 出来事</span>
-        </button>
-        <button class="quest-card qc-blue" id="btnQ2" onclick="startQuiz('eventToYear')" disabled>
-          <span class="qc-icon">⚔️</span>
-          <span class="qc-name">出来事の試練</span>
-          <span class="qc-desc">出来事 → 年号</span>
-        </button>
-        <button class="quest-card qc-purple" id="btnQ3" onclick="startQuiz('random')" disabled>
-          <span class="qc-icon">🎲</span>
-          <span class="qc-name">混沌の迷宮</span>
-          <span class="qc-desc">ランダム出題</span>
-        </button>
+
+      <!-- モード選択 -->
+      <div class="glass-card">
+        <h3 class="card-h">🎮 出題モード</h3>
+        <div class="mode-row">
+          <button class="mode-btn active" onclick="selectMode('yearToEvent',this)" id="modeBtn1">📅 年号→出来事</button>
+          <button class="mode-btn" onclick="selectMode('eventToYear',this)" id="modeBtn2">⚔️ 出来事→年号</button>
+          <button class="mode-btn" onclick="selectMode('random',this)" id="modeBtn3">🎲 ランダム</button>
+        </div>
       </div>
+
+      <!-- ステージ一覧 -->
+      <div class="glass-card">
+        <div class="card-h-row">
+          <h3 class="card-h" style="margin:0">⚔️ ステージ選択</h3>
+          <span style="font-size:.75rem;color:var(--txt2)">10問ずつ・満点で次へ解放</span>
+        </div>
+        <div class="stage-grid" id="stageGrid"></div>
+      </div>
+
     </div>
 
     <!-- 記録タブ -->

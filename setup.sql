@@ -66,3 +66,21 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- =====================================================
+-- ステージ進捗テーブル（追記）
+-- =====================================================
+create table if not exists stage_progress (
+  id bigserial primary key,
+  user_id uuid references auth.users on delete cascade not null,
+  stage integer not null,
+  cleared boolean default false,
+  best_score integer default 0,
+  attempts integer default 0,
+  updated_at timestamptz default now(),
+  unique(user_id, stage)
+);
+alter table stage_progress enable row level security;
+create policy "own_stage_select" on stage_progress for select using (auth.uid() = user_id);
+create policy "own_stage_insert" on stage_progress for insert with check (auth.uid() = user_id);
+create policy "own_stage_update" on stage_progress for update using (auth.uid() = user_id);
