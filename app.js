@@ -315,7 +315,13 @@ async function saveStageProgress(stage, score, total, isPerfect) {
     attempts: (p?.attempts || 0) + 1,
     updated_at: new Date().toISOString()
   };
-  await sb.from('stage_progress').upsert(dat, { onConflict: 'user_id,stage' });
+  try {
+    await dbFetch('stage_progress', {
+      method: 'POST',
+      body: dat,
+      upsert: true
+    });
+  } catch(e) { console.error('saveStageProgress err:', e); }
   stageProgress[stage] = dat;
   renderStageGrid();
 }
@@ -608,28 +614,34 @@ async function showResult() {
   
   const xpGained = quizScore * 10 + (isPerfect ? 50 : 0) + (currentStage && isPerfect ? currentStage * 5 : 0);
   
-  if (currentStage) await saveStageProgress(currentStage, quizScore, total, isPerfect);
-  
-  await saveRecord(curMode, quizScore, total, xpGained, isPerfect);
-  
-  const newXP = (currentProfile.xp || 0) + xpGained;
-  const oldLv = RPG.getLevel(currentProfile.xp || 0);
-  const newLv = RPG.getLevel(newXP);
-  await dbFetch('profiles', {
-    method: 'PATCH',
-    filter: `id=eq.${currentUser.id}`,
-    body: { xp: newXP, level: newLv, updated_at: new Date().toISOString() }
-  });
-  currentProfile.xp = newXP;
-  RPG.updateHeader();
-  
-  const lvArea = document.getElementById('lvUpArea');
-  if (newLv > oldLv) {
-    lvArea.style.display = 'block';
-    document.getElementById('lvUpText').textContent = `🎉 LEVEL UP! → Lv.${newLv} ${RPG.getClass(newLv)}`;
-  } else {
-    lvArea.style.display = 'none';
+  // DB保存やプロファイル更新は、失敗してもUI更新を止めないように try-catch で囲む
+  try {
+    if (currentStage) await saveStageProgress(currentStage, quizScore, total, isPerfect);
+    
+    await saveRecord(curMode, quizScore, total, xpGained, isPerfect);
+    
+    const newXP = (currentProfile.xp || 0) + xpGained;
+    const oldLv = RPG.getLevel(currentProfile.xp || 0);
+    const newLv = RPG.getLevel(newXP);
+    await dbFetch('profiles', {
+      method: 'PATCH',
+      filter: `id=eq.${currentUser.id}`,
+      body: { xp: newXP, level: newLv, updated_at: new Date().toISOString() }
+    });
+    currentProfile.xp = newXP;
+    
+    const lvArea = document.getElementById('lvUpArea');
+    if (newLv > oldLv) {
+      lvArea.style.display = 'block';
+      document.getElementById('lvUpText').textContent = `🎉 LEVEL UP! → Lv.${newLv} ${RPG.getClass(newLv)}`;
+    } else {
+      lvArea.style.display = 'none';
+    }
+  } catch (err) {
+    console.error('Data save failed, but continue UI render:', err);
   }
+  
+  RPG.updateHeader();
   
   const icon = document.getElementById('rIcon');
   const title = document.getElementById('rTitle');
