@@ -104,29 +104,41 @@ async function handleLogin(e) {
   if (!sb) { alert('Supabaseが初期化されていません。リロードしてください。'); return; }
   const btn = document.getElementById('loginBtn');
   const err = document.getElementById('authError');
-  btn.disabled = true; btn.textContent = '通信中...';
+  btn.disabled = true; btn.textContent = '通信中(直接接続)...';
   err.textContent = '';
   
   try {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
     
-    // タイムアウト設定
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('サーバーの応答がありません（タイムアウト）')), 15000));
+    // ライブラリの内部ロックバグを回避するため、直接APIを叩く
+    const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, password })
+    });
     
-    const { error } = await Promise.race([
-      sb.auth.signInWithPassword({ email, password }),
-      timeout
-    ]);
+    const data = await res.json();
     
-    if (error) {
-      err.style.color = 'var(--err)';
-      err.textContent = 'ログイン失敗: ' + (error.status === 400 ? 'メールアドレスまたはパスワードが正しくありません' : error.message);
-      btn.disabled = false; btn.textContent = '冒険を始める';
+    if (!res.ok) {
+      throw new Error(data.error_description || data.msg || 'メールアドレスまたはパスワードが正しくありません');
     }
+    
+    // 手動でセッションをセット（これにより onAuthStateChange が発火して進む）
+    await sb.auth.setSession({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token
+    });
+    
   } catch (ex) {
     err.style.color = 'var(--err)';
-    err.textContent = ex.message;
+    // fetch が失敗する場合はネット自体が遮断されている
+    err.textContent = ex.message === 'Failed to fetch' 
+      ? '通信がブラウザに遮断されました。広告ブロックやVPNをオフにしてください。' 
+      : 'ログイン失敗: ' + ex.message;
     btn.disabled = false; btn.textContent = '冒険を始める';
   }
 }
