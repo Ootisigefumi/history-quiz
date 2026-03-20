@@ -517,16 +517,24 @@ function startStageQuiz(stageNum) {
   currentStage = stageNum;
   curMode = selectedMode;
   const items = getStageItems(stageNum);
+  if (!items || items.length === 0) {
+    showToast('⚠️ ステージデータが見つかりません');
+    return;
+  }
   _buildQuiz(items, selectedMode);
-  const stageName = STAGE_LABELS[stageNum-1];
+  const stageName = STAGE_LABELS[stageNum - 1] || '未知の時代';
   document.getElementById('battleLog').innerHTML = `<div>⚔️ ステージ${stageNum}「${stageName}」 バトル開始！</div>`;
   showScreen('screen-battle');
   renderQuestion();
 }
 
 function startQuiz(mode) {
-  // カスタムデータ（ギルドのデータ）を利用
-  const data = localData.length ? localData : INITIAL_DATA;
+  // カスタムデータがあれば使い、なければ初期データ（INITIAL_DATA）を確実に使う
+  const data = (localData && localData.length > 0) ? localData : INITIAL_DATA;
+  if (!data || data.length === 0) {
+    showToast('⚠️ クイズデータがありません。データを追加するかリロードしてください。');
+    return;
+  }
   currentStage = null;
   curMode = mode;
   _buildQuiz(data, mode);
@@ -536,12 +544,18 @@ function startQuiz(mode) {
 }
 
 function _buildQuiz(data, mode) {
-  const shuffled=[...data].sort(()=>Math.random()-.5).slice(0,Math.min(10,data.length));
-  quizList=shuffled.map(item=>{
-    let type=mode==='yearToEvent'?1:mode==='eventToYear'?2:(Math.random()>.5?1:2);
-    return {...item,type,pattern:type===1?'年号の試練':'出来事の試練'};
+  // 最小でも1問、最大10問を抽出
+  const shuffled = [...data].sort(() => Math.random() - 0.5).slice(0, Math.min(10, data.length));
+  quizList = shuffled.map(item => {
+    // modeが'random'の場合は1（年号→出来事）か2（出来事→年号）をランダムに
+    let type = mode === 'yearToEvent' ? 1 : mode === 'eventToYear' ? 2 : (Math.random() > 0.5 ? 1 : 2);
+    return { ...item, type, pattern: type === 1 ? '年号の試練' : '出来事の試練' };
   });
-  quizIndex=0; quizScore=0; reviewData=[]; playerHP=5; maxHP=5;
+  quizIndex = 0;
+  quizScore = 0;
+  reviewData = [];
+  playerHP = 5;
+  maxHP = 5;
 }
 
 function renderQuestion() {
