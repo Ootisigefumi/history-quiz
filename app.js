@@ -577,23 +577,105 @@ function addLog(msg,type) {
 }
 
 function checkAnswer() {
-  const q=quizList[quizIndex];
-  const ua=document.getElementById('battleInput').value.trim();
-  const ok=q.type===1?(q.event.includes(ua)&&ua.length>1):(Number(ua)===q.year);
-  document.getElementById('battleInput').disabled=true;
-  document.getElementById('btnAttack').style.display='none';
-  document.getElementById('btnNext').style.display='inline-flex';
-  const sp=document.getElementById('enemySprite');
-  if(ok){
-    quizScore++; sp.classList.add('hit'); setTimeout(()=>sp.classList.remove('hit'),400);
-    addLog(`✨ 正解！${q.year}年「${q.event}」`,'log-ok');
-  }else{
+  const q = quizList[quizIndex];
+  const ua = document.getElementById('battleInput').value.trim();
+  let isOk = false;
+  let diffInfo = "";
+
+  if (q.type === 1) {
+    // 【年号→出来事：あいまい判定】
+    const similarity = calculateSimilarity(q.event, ua);
+    // 60%以上一致、または直接含まれていれば正解
+    if (similarity >= 0.6 || (q.event.includes(ua) && ua.length >= 3)) {
+      isOk = true;
+    }
+    // 差分情報の作成
+    diffInfo = generateDiffHtml(q.event, ua);
+  } else {
+    // 【出来事→年号：完全一致（数字なので）】
+    isOk = (Number(ua) === q.year);
+  }
+
+  document.getElementById('battleInput').disabled = true;
+  document.getElementById('btnAttack').style.display = 'none';
+  document.getElementById('btnNext').style.display = 'inline-flex';
+  
+  const sp = document.getElementById('enemySprite');
+  
+  if (isOk) {
+    quizScore++;
+    sp.classList.add('hit');
+    setTimeout(() => sp.classList.remove('hit'), 400);
+    
+    const sim = q.type === 1 ? calculateSimilarity(q.event, ua) : 1;
+    if (sim < 1 && q.type === 1) {
+      addLog(`✨ 惜しい！ほぼ正解！ ${q.year}年: ${q.event}`, 'log-ok');
+      addLogHtml(`🔍 差分: ${diffInfo}`);
+    } else {
+      addLog(`✨ 正解！${q.year}年: ${q.event}`, 'log-ok');
+    }
+  } else {
     playerHP--;
-    const pb=document.querySelector('.player-bar'); pb.classList.add('shake'); setTimeout(()=>pb.classList.remove('shake'),300);
-    addLog(`💥 不正解... 正解は${q.year}年「${q.event}」`,'log-ng');
+    const pb = document.querySelector('.player-bar');
+    pb.classList.add('shake');
+    setTimeout(() => pb.classList.remove('shake'), 300);
+    
+    addLog(`💥 不正解... 正解は ${q.year}年: ${q.event}`, 'log-ng');
+    if (q.type === 1 && ua.length > 0) {
+      addLogHtml(`🔍 差分: ${diffInfo}`);
+    }
     updatePlayerBar();
   }
-  reviewData.push({...q,userAnswer:ua,isCorrect:ok});
+  
+  reviewData.push({ ...q, userAnswer: ua, isCorrect: isOk });
+}
+
+// 類似度の計算 (レーベンシュタイン距離)
+function calculateSimilarity(s1, s2) {
+  if (!s1 || !s2) return 0;
+  if (s1 === s2) return 1;
+  const longer = s1.length > s2.length ? s1 : s2;
+  const shorter = s1.length > s2.length ? s2 : s1;
+  const longerLength = longer.length;
+  if (longerLength === 0) return 1.0;
+  
+  const editDistance = (a, b) => {
+    const tmp = [];
+    for (let i = 0; i <= a.length; i++) tmp[i] = [i];
+    for (let j = 0; j <= b.length; j++) tmp[0][j] = j;
+    for (let i = 1; i <= a.length; i++) {
+      for (let j = 1; j <= b.length; j++) {
+        tmp[i][j] = Math.min(tmp[i - 1][j] + 1, tmp[i][j - 1] + 1, tmp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+    }
+    return tmp[a.length][b.length];
+  };
+
+  return (longerLength - editDistance(longer, shorter)) / longerLength;
+}
+
+// 差分をHTMLで表示する
+function generateDiffHtml(correct, input) {
+  let result = "";
+  const correctArr = Array.from(correct);
+  const inputSet = new Set(Array.from(input));
+  correctArr.forEach(char => {
+    if (inputSet.has(char)) {
+      result += `<b style="color:#4ade80">${char}</b>`;
+    } else {
+      result += `<s style="color:#f87171; opacity:0.6">${char}</s>`;
+    }
+  });
+  return result;
+}
+
+function addLogHtml(html) {
+  const log = document.getElementById('battleLog');
+  const d = document.createElement('div');
+  d.style.cssText = 'font-size:0.75rem; margin-top:2px; color:var(--txt3); border-left: 2px solid var(--border); padding-left: 8px;';
+  d.innerHTML = html;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
 }
 
 function nextQuestion() {
