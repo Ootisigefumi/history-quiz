@@ -224,6 +224,34 @@ const PERSON_DATA = [
   {person: 'マッカーサー', deed: '連合国軍最高司令官。戦後の日本の占領政策をすすめた。'}
 ];
 
+const ROLES = [
+  { lv: 1, title: '見習い剣士' },
+  { lv: 6, title: '熟練の騎士' },
+  { lv: 11, title: '勇名な竜騎士' },
+  { lv: 21, title: '王宮の聖騎士' },
+  { lv: 31, title: '知識の賢者' },
+  { lv: 46, title: '大魔導師' },
+  { lv: 61, title: '伝説の英雄' },
+  { lv: 81, title: '王国の守護神' },
+  { lv: 95, title: '歴史の預言者' },
+  { lv: 99, title: '歴史の神' }
+];
+
+function getRole(lv) {
+  let res = ROLES[0];
+  for (let r of ROLES) {
+    if (lv >= r.lv) res = r;
+  }
+  return res;
+}
+
+function getNextRole(lv) {
+  for (let r of ROLES) {
+    if (r.lv > lv) return r;
+  }
+  return ROLES[ROLES.length - 1];
+}
+
 /* --- Global State --- */
 let currentUser = null;
 let localData = []; // OCR/User Manual Data
@@ -252,8 +280,10 @@ function showScreen(id) {
 function switchTab(id) {
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById(`tab-${id}`).classList.add('active');
-  document.getElementById(`tabBtn${id === 'guild' ? 1 : id === 'quest' ? 2 : 3}`).classList.add('active');
+  const content = document.getElementById(`tab-${id}`);
+  if(content) content.classList.add('active');
+  const btn = document.getElementById(`tabBtn${id === 'quest' ? 2 : 3}`);
+  if(btn) btn.classList.add('active');
   if(id === 'records') renderRecords();
 }
 
@@ -440,16 +470,42 @@ function finishQuiz(win) {
   document.getElementById('rsWrong').textContent = quizList.length - quizScore;
   document.getElementById('rsXP').textContent = `+${bonus}`;
   
+  // 満点お祝い
+  const celeb = document.getElementById('perfectCeleb');
+  if (win && quizScore === 10) {
+    celeb.style.display = 'block';
+    // 盛大に祝う
+    const duration = 3 * 1000;
+    const end = Date.now() + duration;
+
+    (function frame() {
+      confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 } });
+      confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 } });
+      if (Date.now() < end) requestAnimationFrame(frame);
+    }());
+  } else {
+    celeb.style.display = 'none';
+  }
+
   updateBars();
   showScreen('screen-result');
 }
 
 /* --- UI Utilities --- */
 function updateBars() {
+  const role = getRole(userLv);
+  const next = getNextRole(userLv);
+  const nextXP = userLv * 100;
+
   document.getElementById('headerLv').textContent = `Lv.${userLv}`;
+  document.getElementById('headerClass').textContent = role.title;
   document.getElementById('headerXP').textContent = userXP;
-  document.getElementById('headerXPBar').style.width = `${(userXP / (userLv*100)) * 100}%`;
+  document.getElementById('nextLVXP').textContent = nextXP;
+  document.getElementById('headerXPBar').style.width = `${(userXP / nextXP) * 100}%`;
   
+  document.getElementById('nextRole').textContent = next.title;
+  document.getElementById('nextRoleLv').textContent = next.lv - userLv <= 0 ? 0 : next.lv - userLv;
+
   if(document.getElementById('screen-battle').classList.contains('active')) {
     document.getElementById('playerHP').style.width = `${(playerHP/playerMaxHP)*100}%`;
     document.getElementById('playerHPText').textContent = `HP ${playerHP}/${playerMaxHP}`;

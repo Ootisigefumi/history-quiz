@@ -49,56 +49,24 @@
     <div class="retro-box" style="margin-bottom:10px;">
       <div class="header-row">
         <span><span id="headerLv">Lv.1</span> <span id="headerClass">見習い剣士</span></span>
-        <span>SCORE <span id="headerXP">0</span> 📖</span>
+        <span style="font-size:0.7rem; opacity:0.8;">次: <span id="nextRole">熟練の騎士</span> (あとLv <span id="nextRoleLv">5</span>)</span>
       </div>
       <div class="header-bars">
         <div class="bar" id="headerXPBar" style="width:0%;"></div>
       </div>
+      <p style="font-size:0.6rem; text-align:right; margin-top:2px;">XP <span id="headerXP">0</span> / <span id="nextLVXP">100</span></p>
     </div>
 
     <!-- タブナビ -->
     <div class="tab-row">
-      <button class="tab-btn active" id="tabBtn1" onclick="switchTab('guild')">ギルド</button>
-      <button class="tab-btn" id="tabBtn2" onclick="switchTab('quest')">クエスト</button>
+      <button class="tab-btn active" id="tabBtn2" onclick="switchTab('quest')">クエスト</button>
       <button class="tab-btn" id="tabBtn3" onclick="switchTab('records')">きろく</button>
     </div>
 
-    <!-- ギルドタブ -->
-    <div id="tab-guild" class="tab-content active">
-      <div class="retro-box">
-        <h3 class="yellow-lbl">巻物をアップロード</h3>
-        <p style="font-size:0.8rem; margin-bottom:8px;">画像やPDFから知識を抽出します</p>
-        <div style="border:2px dashed #fff; padding:20px; text-align:center; position:relative;">
-          <input type="file" id="fileInput" accept="image/*,application/pdf" multiple style="position:absolute; inset:0; opacity:0; cursor:pointer;" />
-          <span style="font-size:2rem;">🗺️</span>
-          <p>ファイルをドロップ</p>
-        </div>
-        <div id="ocrWrap" style="display:none; margin-top:10px;">
-          <p id="ocrStatus" style="font-size:0.7rem;">解読中...</p>
-          <div class="header-bars"><div class="bar" id="ocrBar"></div></div>
-        </div>
-      </div>
-
-      <div class="retro-box">
-        <h3 class="yellow-lbl">手動で書き込む</h3>
-        <input type="number" id="manualYear" class="battle-input" placeholder="年号" style="width:100px; padding:6px; font-size:0.9rem; display:inline-block;" />
-        <input type="text" id="manualEvent" class="battle-input" placeholder="出来事" style="width:calc(100% - 110px); padding:6px; font-size:0.9rem; display:inline-block; margin-left:4px;" />
-        <button class="btn-large" onclick="manualAdd()" style="padding:8px; font-size:1rem; margin-top:10px;">書き込む</button>
-      </div>
-
-      <div class="retro-box">
-        <h3 class="yellow-lbl">ちしきの書庫 (<span id="dataCount">0</span>)</h3>
-        <div id="dataList" class="data-list"></div>
-        <div style="display:flex; gap:4px; margin-top:10px;">
-            <button class="btn-sm" style="flex:1" onclick="exportData()">💾 保存</button>
-            <label class="btn-sm" style="flex:1; text-align:center; cursor:pointer;">📂 読込<input type="file" id="importInput" accept=".json" style="display:none;" /></label>
-            <button class="btn-sm" style="color:var(--m-red)" onclick="clearAllData()">🗑️ 抹消</button>
-        </div>
-      </div>
-    </div>
+    <!-- ギルドタブは削除 -->
 
     <!-- クエストタブ -->
-    <div id="tab-quest" class="tab-content">
+    <div id="tab-quest" class="tab-content active">
       <div class="retro-box">
         <h3 class="yellow-lbl">しれんのけいしき</h3>
         <div style="display:flex; gap:4px; justify-content:center;">
@@ -169,8 +137,12 @@
   <!-- ===== 結果画面 ===== -->
   <section id="screen-result" class="screen">
     <div class="result-title" id="rTitle">勝利！</div>
-    
-    <div class="retro-box">
+
+    <!-- 満点お祝いエリア -->
+    <div id="perfectCeleb" class="retro-box" style="display:none; text-align:center; border-color:var(--m-gold); border-width:8px; animation: flash border 0.5s infinite alternate;">
+      <h2 style="color:var(--m-gold); font-size:2.5rem; margin-bottom:10px;">✨ PERFECT! ✨</h2>
+      <p style="font-size:1.2rem; line-height:1.6;">あなたは全ての試練を<br>完璧に攻略しました！<br>歴史界の伝説に一歩近づきました！</p>
+    </div>
       <div class="result-stats">
         <p>正解数: <span id="rsCorrect" style="color:var(--m-green)">0</span></p>
         <p>不正解: <span id="rsWrong" style="color:var(--m-red)">0</span></p>
