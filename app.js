@@ -367,10 +367,11 @@ function checkAnswer() {
   
   if (currentSeries === 'person') {
     const target = q.type === 1 ? q.deed : q.person;
-    ok = calculateSimilarity(target, ua) >= 0.5 || target.includes(ua) && ua.length >= 2;
+    ok = calculateSimilarity(target, ua) >= 0.4 || target.includes(ua) && ua.length >= 2;
   } else {
     if (q.type === 1) {
-      ok = calculateSimilarity(q.event, ua) >= 0.5 || q.event.includes(ua) && ua.length >= 3;
+      // For events, if the answer is long but partially matches, or if it's a direct substring
+      ok = calculateSimilarity(q.event, ua) >= 0.4 || q.event.includes(ua) && ua.length >= 2;
     } else {
       ok = Number(ua) === q.year;
     }
@@ -490,11 +491,12 @@ function goHome() {
 /* --- Similarity (Simple character match) --- */
 function calculateSimilarity(s1, s2) {
   if(!s1 || !s2) return 0;
-  let matches = 0;
-  for(let char of s2) {
-    if(s1.includes(char)) matches++;
-  }
-  return matches / Math.max(s1.length, s2.length);
+  const v1 = s1.trim().replace(/[、。！？\s]/g, '');
+  const v2 = s2.trim().replace(/[、。！？\s]/g, '');
+  const set1 = new Set(v1);
+  const set2 = new Set(v2);
+  const common = [...set2].filter(x => set1.has(x)).length;
+  return common / Math.max(1, v2.length); // How much of the user's answer is in the target
 }
 
 /* --- Storage & Auth --- */
