@@ -254,6 +254,7 @@ function switchTab(id) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(`tab-${id}`).classList.add('active');
   document.getElementById(`tabBtn${id === 'guild' ? 1 : id === 'quest' ? 2 : 3}`).classList.add('active');
+  if(id === 'records') renderRecords();
 }
 
 function setSeries(s) {
@@ -414,14 +415,23 @@ function finishQuiz(win) {
     document.getElementById('lvUpArea').style.display = 'none';
   }
   
-  // Progress
+  const d = new Date();
+  records.unshift({
+    date: `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`,
+    series: currentSeries === 'year' ? '年号' : '人物',
+    score: quizScore,
+    win: win
+  });
+  if(records.length > 20) records.pop();
+
   if(win && quizScore === STAGE_SIZE && currentStage) {
     if(!progress[currentSeries]) progress[currentSeries] = [];
     if(!progress[currentSeries].includes(currentStage)) progress[currentSeries].push(currentStage);
-    saveLocal();
-    if(currentStage === Math.ceil((currentSeries==='year'?YEAR_DATA:PERSON_DATA).length/STAGE_SIZE)) {
-        showCert();
-    }
+  }
+  saveLocal();
+
+  if(win && quizScore === STAGE_SIZE && currentStage === Math.ceil((currentSeries==='year'?YEAR_DATA:PERSON_DATA).length/STAGE_SIZE)) {
+    showCert();
   }
   
   document.getElementById('rTitle').textContent = win ? '勝利！' : '敗北...';
@@ -488,14 +498,37 @@ function calculateSimilarity(s1, s2) {
 }
 
 /* --- Storage & Auth --- */
+function renderRecords() {
+  const list = document.getElementById('recordsList');
+  list.innerHTML = '';
+  if(records.length === 0) { list.innerHTML = '<p style="text-align:center; opacity:0.5;">まだ記録がありません</p>'; return; }
+
+  let totalClear = 0;
+  let perfects = 0;
+  let totalXP = 0; // Calculate from records if needed, or keep global
+
+  records.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'data-item';
+    div.innerHTML = `<span>[${r.date}] ${r.series}</span> <span>${r.score}/10 ${r.win?'⭕':'❌'}</span>`;
+    list.appendChild(div);
+    if(r.win) totalClear++;
+    if(r.score === 10) perfects++;
+  });
+
+  document.getElementById('statTotal').textContent = totalClear;
+  document.getElementById('statPerfect').textContent = perfects;
+}
+
 function saveLocal() {
-    localStorage.setItem('hist_quiz_v2', JSON.stringify({ userLv, userXP, progress }));
+    localStorage.setItem('hist_quiz_v2', JSON.stringify({ userLv, userXP, progress, records }));
 }
 function loadLocal() {
     const d = JSON.parse(localStorage.getItem('hist_quiz_v2') || '{}');
     if(d.userLv) userLv = d.userLv;
     if(d.userXP) userXP = d.userXP;
     if(d.progress) progress = d.progress;
+    if(d.records) records = d.records;
 }
 
 function handleLogin(e) {
