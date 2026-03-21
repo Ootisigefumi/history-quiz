@@ -460,10 +460,6 @@ function finishQuiz(win) {
     if(!progress[currentSeries].includes(currentStage)) progress[currentSeries].push(currentStage);
   }
   saveLocal();
-
-  if(win && quizScore === STAGE_SIZE && currentStage === Math.ceil((currentSeries==='year'?YEAR_DATA:PERSON_DATA).length/STAGE_SIZE)) {
-    showCert();
-  }
   
   document.getElementById('rTitle').textContent = win ? '勝利！' : '敗北...';
   document.getElementById('rsCorrect').textContent = quizScore;
@@ -474,6 +470,7 @@ function finishQuiz(win) {
   const celeb = document.getElementById('perfectCeleb');
   if (win && quizScore === 10) {
     celeb.style.display = 'block';
+    showCert(); // Award certificate for every perfect score
     // 盛大に祝う
     const duration = 3 * 1000;
     const end = Date.now() + duration;
@@ -529,8 +526,20 @@ function showToast(m) {
 }
 
 function showCert() {
-  document.getElementById('certName').textContent = (currentUser ? currentUser.name : '冒険者') + ' 殿';
+  const name = (currentUser ? currentUser.name : '冒険者');
+  const seriesName = currentSeries === 'year' ? '年号' : '人物';
+  const labels = currentSeries === 'year' ? YEAR_STAGE_LABELS : PERSON_STAGE_LABELS;
+  const stageLabel = currentStage ? labels[currentStage-1] : '特別（ランダム）';
+  
+  document.getElementById('certName').textContent = name + ' 殿';
   document.getElementById('certDate').textContent = new Date().toLocaleDateString('ja-JP');
+  
+  // Update body text
+  const body = document.querySelector('.cert-body');
+  if(body) {
+    body.innerHTML = `あなたは「歴史クエスト」の<br>【${seriesName}：${stageLabel}】<br>において すべての しれんを<br>かんぺきに ときあかしました！`;
+  }
+
   document.getElementById('certOverlay').classList.add('active');
   confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
 }
