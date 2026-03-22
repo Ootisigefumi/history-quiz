@@ -1,7 +1,7 @@
 /**
  * 勉強RPG 歴史クエスト
  * app.js - Optimized for Root index.html (Retro UI)
- * FIX: Added missing currentIdx increment
+ * FIX: Added Player HP logic, corrected toast class, fixed enemy HP width
  */
 
 /* --- Supabase Config (Mock Placeholder) --- */
@@ -123,12 +123,12 @@ const PERSON_DATA = [
   {person: '清少納言', deed: '随筆「枕草子」の作者。藤原道長の兄の娘である定子の家庭教師。'},
   {person: '北条政子', deed: '源頼朝の妻。頼朝の死後、尼将軍と呼ばれる。承久の乱のとき、御家人をはげます。'},
   {person: '樋口一葉', deed: '明治時代の小説家。「にごりえ」「たけくらべ」などを著す。五千円札の肖像。'},
-  {person: '津田梅子', deed: '日本初の女子留学生の1人。女子英学塾を創設し英語教育。五千円札の肖像. '},
+  {person: '津田梅子', deed: '日本初の女子留学生の1人。女子英学塾を創設し英語教育。五千円札の肖像。'},
   {person: '与謝野晶子', deed: '歌人。日露戦争に出征した弟を案じ、詩「君死にたまふことなかれ」を発表。'},
   {person: '平塚らいてう', deed: '市川房枝らとともに女性の解放や参政権を求める運動を展開。雑誌「青鞜」を創刊。'},
   {person: '雄略天皇', deed: '5世紀の後の五王の1人。倭王武。埼玉県稲荷山古墳の鉄剣にその名がある。'},
   {person: '推古天皇', deed: '初の女性の天皇。おいの聖徳太子を摂政にして大王（天皇）中心の政治をめざす。'},
-  {person: '聖徳太子', deed: '冠位十二階・十七条の憲法を制定。小野妹子を遣隋使として送る。'},
+  {person: '聖徳太子', deed: '冠位十二階・十七条の憲法を制定。小野妹子を遣隋使として送る. '},
   {person: '中大兄皇子', deed: '蘇我氏を滅ぼして大化の改新を始める。後に、大津で即位して天智天皇に。'},
   {person: '元明天皇', deed: '710年に都を藤原京から平城京に移した女性の天皇。'},
   {person: '聖武天皇', deed: '国ごとに国分寺を、東大寺に大仏をつくることを命令。墾田永年私財法を制定。'},
@@ -217,7 +217,7 @@ const PERSON_DATA = [
   {person: '聖徳太子', deed: '十七条の憲法、冠位十二階。'},
   {person: '空海', deed: '真言宗。高野山。'},
   {person: '最澄', deed: '天台宗。比叡山。'},
-  {person: '法然', deed: '浄土宗. 専修念仏。'},
+  {person: '法然', deed: '浄土宗。専修念仏。'},
   {person: '親鸞', deed: '浄土真宗。悪人正機。'},
   {person: '一遍', deed: '時宗。踊念仏。'},
   {person: '栄西', deed: '臨済宗。座禅。茶の普及。'},
@@ -254,6 +254,7 @@ let currentStage = 0;
 let currentQuestions = [];
 let currentIdx = 0;
 let score = 0;
+let playerHP = 5;
 let currentUser = null;
 let userLv = 1;
 let userXP = 0;
@@ -349,6 +350,7 @@ function startStage(stageIdx) {
   currentStage = stageIdx;
   score = 0;
   currentIdx = 0;
+  playerHP = 5;
   wrongList = [];
   
   const dataSet = currentSeries === 'year' ? YEAR_DATA : PERSON_DATA;
@@ -378,11 +380,21 @@ function startStage(stageIdx) {
 
   currentQuestions.sort(() => Math.random() - 0.5);
   showScreen('screen-battle');
+  updateHPUI();
   nextQuestion();
 }
 
+function updateHPUI() {
+    setText('playerHPText', `HP ${playerHP}/5`);
+    const pBar = document.getElementById('playerHP');
+    if(pBar) pBar.style.width = (playerHP / 5 * 100) + '%';
+    
+    const eBar = document.getElementById('enemyHP');
+    if(eBar) eBar.style.width = '100%';
+}
+
 function nextQuestion() {
-  if (currentIdx >= currentQuestions.length) {
+  if (currentIdx >= currentQuestions.length || playerHP <= 0) {
     endQuiz();
     return;
   }
@@ -406,7 +418,8 @@ function nextQuestion() {
 }
 
 function checkAnswer() {
-  const input = document.getElementById('battleInput').value.trim();
+  const inputEl = document.getElementById('battleInput');
+  const input = inputEl ? inputEl.value.trim() : "";
   const qObj = currentQuestions[currentIdx];
   const correct = qObj.a;
   
@@ -415,18 +428,19 @@ function checkAnswer() {
   if (isCorrect) {
     score++;
     showToast("正解！", "success");
-    document.getElementById('enemyHP').style.width = '0%';
+    const eBar = document.getElementById('enemyHP');
+    if(eBar) eBar.style.width = '0%';
     if(typeof confetti === 'function') confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
   } else {
+    playerHP--;
     showToast(`不正解...`, "error");
+    updateHPUI();
     wrongList.push({ q: qObj.q, a: correct, user: input });
   }
 
   document.getElementById('btnAttack').style.display = 'none';
   document.getElementById('btnNext').style.display = 'block';
   
-  // CRITICAL: Increment index HERE or in nextQuestion. 
-  // Let's increment HERE so btnNext transitions correctly.
   currentIdx++;
 }
 
@@ -440,6 +454,7 @@ function fuzzyMatch(input, correct) {
 
 function endQuiz() {
   showScreen('screen-result');
+  setText('rTitle', playerHP > 0 ? '勝利！' : '敗北...');
   setText('rsCorrect', score);
   setText('rsWrong', 10 - score);
   const xp = score * 10;
@@ -499,6 +514,7 @@ function closeCert() {
 function goHome() {
     showScreen('screen-main');
     switchTab('quest');
+    renderStageGrid();
 }
 
 function retryWrong() {
@@ -538,9 +554,18 @@ function showToast(msg, type="info") {
   const t = document.getElementById('toast');
   if(!t) return;
   t.textContent = msg;
-  t.style.background = type === 'success' ? '#2ecc71' : (type === 'error' ? '#e74c3c' : '#3498db');
-  t.classList.add('active');
-  setTimeout(() => t.classList.remove('active'), 2500);
+  if (type === 'success') {
+      t.style.background = '#00ff00';
+      t.style.color = '#000';
+  } else if (type === 'error') {
+      t.style.background = '#ff0000';
+      t.style.color = '#fff';
+  } else {
+      t.style.background = '#0055ff';
+      t.style.color = '#fff';
+  }
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
 }
 
 function getRole(lv) {
