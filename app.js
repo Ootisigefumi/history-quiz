@@ -1,111 +1,121 @@
 /**
  * 勉強RPG 歴史クエスト
- * app.js - Retro UI & Person Feature Support
+ * app.js - Optimized & Final Version
  */
 
-/* --- Supabase Config (Using Window Proxy) --- */
+/* --- Supabase Config (Mock Placeholder) --- */
 let sb;
 async function initSB() {
   if (typeof supabase !== 'undefined') {
     // Note: Constants for SB_URL/KEY are usually injected or hardcoded
-    // For this environment, I will use a placeholder but assume they are available if needed.
-    // However, for local stability, I'll check for environment variables or globals.
   }
 }
 
-/* --- Core Data --- */
+/* --- Core Data: Year (100 items) --- */
 const YEAR_DATA = [
-  {year: 57, event: '倭の奴国が漢（後漢）に使いを送り、金印を授かる。'},
-  {year: 239, event: '邪馬台国の女王・卑弥呼が魏に使いを送る。'},
-  {year: 538, event: '仏教が百済から日本に伝わる。'},
-  {year: 593, event: '聖徳太子が推古天皇の摂政になる。'},
-  {year: 604, event: '冠位十二階と憲法十七条が制定される。'},
-  {year: 607, event: '小野妹子が遣隋使として唐（隋）に送られる。'},
-  {year: 645, event: '大化の改新が始まる。中大兄皇子らが蘇我氏を倒す。'},
-  {year: 663, event: '白村江の戦いで、日本が唐・新羅の連合軍に敗れる。'},
-  {year: 701, event: '大宝律令が完成し、法に基づく政治が始まる。'},
-  {year: 710, event: '都が平城京（奈良）に移される（奈良時代の始まり）。'},
-  {year: 712, event: '日本最古の歴史書「古事記」が完成する。'},
-  {year: 743, event: '墾田永年私財法が制定され、土地の私有が認められる。'},
-  {year: 752, event: '東大寺の大仏が完成し、開眼供養が行われる。'},
-  {year: 794, event: '都が平安京（京都）に移される（平安時代の始まり）。'},
-  {year: 894, event: '菅原道真の提案により遣唐使が廃止される。'},
-  {year: 1016, event: '藤原道長が摂政になり、摂関政治の全盛期を迎える。'},
-  {year: 1086, event: '白河天皇が上皇となり、院政を始める。'},
-  {year: 1159, event: '平治の乱が起き、平氏が政権を握るきっかけとなる。'},
-  {year: 1167, event: '平清盛が武士として初めて太政大臣になる。'},
-  {year: 1185, event: '壇ノ浦の戦いで平氏が滅亡する。'},
-  {year: 1192, event: '源頼朝が征夷大将軍になり、鎌倉幕府を開く。'},
-  {year: 1232, event: '北条泰時が御成敗式目（貞永式目）を制定する。'},
-  {year: 1274, event: '元寇（文永の役）が起きる。'},
-  {year: 1281, event: '元寇（弘安の役）が起きる。'},
-  {year: 1333, event: '鎌倉幕府が滅亡する。'},
-  {year: 1334, event: '後醍醐天皇による建武の新政が行われる。'},
-  {year: 1338, event: '足利尊氏が征夷大将軍になり、室町幕府を開く。'},
-  {year: 1392, event: '足利義満が南北朝の統一を成し遂げる。'},
-  {year: 1404, event: '足利義満が明との間で勘合貿易を開始する。'},
-  {year: 1467, event: '応仁の乱が始まり、戦国時代の幕開けとなる。'},
-  {year: 1543, event: '種子島に鉄砲が伝来する。'},
-  {year: 1549, event: 'フランシスコ・ザビエルがキリスト教を伝える。'},
-  {year: 1560, event: '桶狭間の戦いで織田信長が今川義元を破る。'},
-  {year: 1573, event: '織田信長が足利義昭を追放し、室町幕府が滅亡する。'},
-  {year: 1575, event: '長篠の戦いで織田・徳川連合軍が武田勝頼を破る。'},
-  {year: 1582, event: '本能寺の変で織田信長が明智光秀に倒される。'},
-  {year: 1588, event: '豊臣秀吉が刀狩令を出す。'},
-  {year: 1590, event: '豊臣秀吉が小田原を攻め落とし、天下統一を果たす。'},
-  {year: 1600, event: '関ヶ原の戦いが起きる。'},
-  {year: 1603, event: '徳川家康が征夷大将軍になり、江戸幕府を開く。'},
-  {year: 1637, event: '島原・天草一揆が起きる。'},
-  {year: 1639, event: 'ポルトガル船の来航を禁止し、鎖国が完成する。'},
-  {year: 1649, event: '慶安の御触書が出される（農民の生活を制限）。'},
-  {year: 1685, event: '徳川綱吉が生類憐みの令を出す。'},
-  {year: 1716, event: '徳川吉宗による享保の改革が始まる。'},
-  {year: 1772, event: '田沼意次が老中になり、商業重視の政治を行う。'},
-  {year: 1787, event: '松平定信による寛政の改革が始まる。'},
-  {year: 1837, event: '大塩平八郎の乱が起きる。'},
-  {year: 1841, event: '水野忠邦による天保の改革が始まる。'},
-  {year: 1853, event: 'ペリーが浦賀に来航する。'},
-  {year: 1854, event: '日米和親条約が結ばれ、開港する。'},
-  {year: 1858, event: '日米修好通商条約が結ばれる。'},
-  {year: 1867, event: '徳川慶喜が大政奉還を行い、幕府が滅亡する。'},
-  {year: 1868, event: '五か条の御誓文が出され、明治維新が始まる。'},
-  {year: 1871, event: '廃藩置県が行われる。'},
-  {year: 1873, event: '徴兵令と地租改正が行われる。'},
-  {year: 1877, event: '西南戦争が起き、西郷隆盛が敗れる。'},
-  {year: 1885, event: '内閣制度が創設され、伊藤博文が初代首相になる。'},
-  {year: 1889, event: '大日本帝国憲法が発布される。'},
-  {year: 1890, event: '第1回衆議院議員総選挙が行われる。'},
-  {year: 1894, event: '日清戦争が始まる。陸奥宗光が領事裁判権を撤廃。'},
-  {year: 1895, event: '下関条約が結ばれ、台湾を譲り受ける。'},
-  {year: 1902, event: '日英同盟が結ばれる。'},
-  {year: 1904, event: '日露戦争が始まる。'},
-  {year: 1905, event: 'ポーツマス条約が結ばれる。'},
-  {year: 1910, event: '韓国併合が行われる。'},
-  {year: 1911, event: '小村寿太郎が関税自主権の回復に成功する。'},
-  {year: 1914, event: '第一次世界大戦が始まる。'},
-  {year: 1918, event: '米騒動が起き、原敬の本格的な政党内閣が誕生。'},
-  {year: 1923, event: '関東大震災が発生する。'},
-  {year: 1925, event: '普通選挙法と治安維持法が制定される。'},
-  {year: 1929, event: '世界恐慌が始まる。'},
-  {year: 1931, event: '満州事変が起きる。'},
-  {year: 1932, event: '五・一五事件が起き、犬養毅首相が暗殺される。'},
-  {year: 1937, event: '日中戦争が始まる。'},
-  {year: 1941, event: '太平洋戦争が始まる（真珠湾攻撃）。'},
-  {year: 1945, event: 'ポツダム宣言を受諾し、第二次世界大戦終結。'},
-  {year: 1946, event: '日本国憲法が公布される。'},
-  {year: 1951, event: 'サンフランシスコ平和条約と日米安保条約に調印。'},
-  {year: 1956, event: '日ソ共同宣言によりソ連との国交回復、国連加盟。'},
-  {year: 1964, event: '東京オリンピックが開催され、東海道新幹線が開通。'},
-  {year: 1972, event: '沖縄が返還される。日中共同声明で国交正常化。'},
-  {year: 1989, event: '昭和天皇が崩御し、元号が「平成」に変わる。'},
-  {year: 1995, event: '阪神・淡路大震災、地下鉄サリン事件が発生する。'},
-  {year: 2011, event: '東日本大震災が発生する。'},
-  {year: 2019, event: '元号が「令和」に変わる。'}
+  {year: 239, event: '邪馬台国の卑弥呼が魏に使いを送る'},
+  {year: 538, event: '百済から仏教が伝来する'},
+  {year: 593, event: '聖徳太子が推古天皇の摂政になる'},
+  {year: 607, event: '遣隋使として小野妹子を送る'},
+  {year: 645, event: '大化の改新で中大兄皇子、中臣鎌足が蘇我氏を倒す'},
+  {year: 672, event: '壬申の乱'},
+  {year: 701, event: '大宝律令'},
+  {year: 710, event: '元明天皇が平城京に遷都'},
+  {year: 723, event: '三世一身の法'},
+  {year: 743, event: '墾田永年私財法'},
+  {year: 794, event: '桓武天皇が平安京に遷都'},
+  {year: 894, event: '遣唐使廃止'},
+  {year: 939, event: '平将門の乱'},
+  {year: 939, event: '藤原純友の乱'},
+  {year: 1016, event: '藤原道長が摂政'},
+  {year: 1086, event: '白河上皇の院政開始'},
+  {year: 1156, event: '保元の乱'},
+  {year: 1159, event: '平治の乱'},
+  {year: 1167, event: '平清盛が太政大臣'},
+  {year: 1185, event: '壇ノ浦の戦い・守護地頭'},
+  {year: 1192, event: '源頼朝が征夷大将軍に任命された'},
+  {year: 1221, event: '後鳥羽上皇が承久の乱を起こした'},
+  {year: 1232, event: '北条泰時が御成敗式目を制定'},
+  {year: 1274, event: '文永の役'},
+  {year: 1281, event: '弘安の役'},
+  {year: 1333, event: '鎌倉幕府滅亡'},
+  {year: 1334, event: '後醍醐天皇の建武の新政'},
+  {year: 1338, event: '足利尊氏が室町幕府を開く'},
+  {year: 1392, event: '足利義満による南北朝統一'},
+  {year: 1428, event: '正長の土一揆'},
+  {year: 1467, event: '応仁の乱'},
+  {year: 1485, event: '山城の国一揆'},
+  {year: 1488, event: '加賀一向一揆'},
+  {year: 1543, event: 'ポルトガル人が種子島に鉄砲伝来'},
+  {year: 1549, event: 'キリスト教伝来'},
+  {year: 1573, event: '室町幕府滅亡'},
+  {year: 1575, event: '長篠の戦い'},
+  {year: 1582, event: '本能寺の変'},
+  {year: 1588, event: '刀狩'},
+  {year: 1590, event: '全国統一'},
+  {year: 1600, event: '関ヶ原の戦い'},
+  {year: 1603, event: '江戸幕府成立'},
+  {year: 1615, event: '武家諸法度'},
+  {year: 1635, event: '参勤交代'},
+  {year: 1637, event: '島原の乱'},
+  {year: 1639, event: '鎖国完成'},
+  {year: 1716, event: '享保の改革'},
+  {year: 1772, event: '田沼意次'},
+  {year: 1787, event: '寛政の改革'},
+  {year: 1825, event: '異国船打払令'},
+  {year: 1837, event: '大塩平八郎の乱'},
+  {year: 1841, event: '天保の改革'},
+  {year: 1853, event: 'ペリー来航'},
+  {year: 1854, event: '日米和親条約'},
+  {year: 1858, event: '日米修好通商条約'},
+  {year: 1860, event: '桜田門外の変'},
+  {year: 1866, event: '薩長同盟'},
+  {year: 1867, event: '大政奉還'},
+  {year: 1868, event: '五箇条の御誓文'},
+  {year: 1871, event: '廃藩置県'},
+  {year: 1872, event: '学制発布'},
+  {year: 1873, event: '地租改正'},
+  {year: 1877, event: '西南戦争'},
+  {year: 1881, event: '自由民権運動'},
+  {year: 1885, event: '内閣制度'},
+  {year: 1889, event: '大日本帝国憲法'},
+  {year: 1890, event: '帝国議会'},
+  {year: 1894, event: '日清戦争'},
+  {year: 1895, event: '下関条約'},
+  {year: 1901, event: '八幡製鉄所'},
+  {year: 1902, event: '日英同盟'},
+  {year: 1904, event: '日露戦争'},
+  {year: 1905, event: 'ポーツマス条約'},
+  {year: 1910, event: '韓国併合'},
+  {year: 1911, event: '関税自主権回復'},
+  {year: 1914, event: '第一次世界大戦'},
+  {year: 1915, event: '二十一か条の要求'},
+  {year: 1917, event: 'ロシア革命'},
+  {year: 1918, event: '米騒動'},
+  {year: 1920, event: '国際連盟'},
+  {year: 1923, event: '関東大震災'},
+  {year: 1925, event: '普通選挙法・治安維持法'},
+  {year: 1929, event: '世界恐慌'},
+  {year: 1931, event: '満州事変'},
+  {year: 1932, event: '五・一五事件'},
+  {year: 1933, event: '国際連盟脱退'},
+  {year: 1936, event: '二・二六事件'},
+  {year: 1937, event: '日中戦争'},
+  {year: 1938, event: '国家総動員法'},
+  {year: 1939, event: '第二次世界大戦'},
+  {year: 1941, event: '太平洋戦争'},
+  {year: 1945, event: '終戦'},
+  {year: 1950, event: '朝鮮戦争'},
+  {year: 1951, event: 'サンフランシスコ平和条約'},
+  {year: 1956, event: '国連加盟'},
+  {year: 1964, event: '東京オリンピック'},
+  {year: 1972, event: '沖縄返還'},
+  {year: 1978, event: '日中平和友好条約'},
+  {year: 1990, event: '東西ドイツ統一'},
+  {year: 1995, event: '阪神淡路大震災'}
 ];
 
-const PERSON_STAGE_LABELS = ['伝説・古代の女性','古代の天皇・政治家','奈良・平安の知識人','平安・鎌倉の武士','室町・戦国の英雄','江戸の政治と一揆','幕末・維新の志士','明治・大正の政治','昭和・現代の歩み','古典芸術・作家①','古典芸術・宗教家','思想家・外国人'];
-const YEAR_STAGE_LABELS = ['古代①（古墳〜奈良）','古代②（奈良〜平安）','中世①（鎌倉〜室町）','中世②（戦国〜安土桃山）','近世①（江戸時代）','近世②（江戸末期〜明治）','近代①（明治時代）','近代②（大正〜昭和初期）','現代（昭和〜令和）'];
-
+/* --- PERSON DATA --- */
 const PERSON_DATA = [
   {person: '卑弥呼', deed: '邪馬台国の女王。まじないによって人々を支配した。魏に使いを送り、称号を授かる。'},
   {person: '紫式部', deed: '小説「源氏物語」の作者。藤原道長の娘である彰子の家庭教師。'},
@@ -127,102 +137,101 @@ const PERSON_DATA = [
   {person: '後醍醐天皇', deed: '鎌倉幕府を倒して建武の新政を始めるが失敗。吉野に逃れ、南朝を開く。'},
   {person: '明治天皇', deed: '五か条の御誓文・大日本帝国憲法・教育勅語などを発布し、天皇の権威を確立する。'},
   {person: '中臣鎌足', deed: '中大兄皇子に協力して大化の改新をすすめる。天智天皇から藤原の姓を授かる。'},
-  {person: '阿倍仲麻呂', deed: '唐に送られた留学生で、唐で一生を終える。「天の原 ふりさけみれば…」の歌の作者。'},
-  {person: '菅原道真', deed: '遣唐使の停止を提案。藤原氏によって大宰府に移される。学問の神様として知られる。'},
-  {person: '藤原純友', deed: '10世紀、瀬戸内海の海賊を率いて反乱を起こす。'},
-  {person: '藤原道長', deed: '11世紀前半、摂関政治の全盛期を築く。「この世をば わが世とぞ思う…」の歌の作者。'},
-  {person: '藤原頼通', deed: '藤原道長の子で、摂政・関白を務める。宇治に平等院鳳凰堂を建立。'},
-  {person: '坂上田村麻呂', deed: '桓武天皇から征夷大将軍に任命され、東北地方の蝦夷をおさえる。'},
-  {person: '平将門', deed: '10世紀に関東で反乱を起こし、自ら「新皇」を名のる。'},
-  {person: '平清盛', deed: '平治の乱で源義朝を破り、武士で最初の太政大臣となる。日宋貿易をさかんにする。'},
-  {person: '源頼朝', deed: '1192年、征夷大将軍に任命され、鎌倉幕府を開く。源義経の兄。'},
-  {person: '源義経', deed: '源義朝の子で源頼朝の弟。壇ノ浦の戦いで平氏を滅ぼす。'},
-  {person: '北条泰時', deed: '鎌倉幕府の3代執権。最初の武家法である御成敗式目を制定し、執権政治を確立。'},
-  {person: '北条時宗', deed: '鎌倉幕府の8代執権。元寇（文永の役・弘安の役）をしりぞける。円覚寺を建立。'},
-  {person: '足利尊氏', deed: '室町幕府の初代将軍。京都の朝廷（北朝）から征夷大将軍に任じられて幕府を開く。'},
-  {person: '足利義満', deed: '室町幕府の3代将軍。南北朝を合一し、金閣（鹿苑寺）を建てる。日明貿易を開始。'},
-  {person: '足利義政', deed: '室町幕府の8代将軍。後継者争いなどから応仁の乱が起こる。東山に銀閣（慈照寺）を建てる。'},
-  {person: '足利義昭', deed: '室町幕府最後の将軍。織田信長によって京都から追放され、室町幕府が滅亡する。'},
-  {person: '織田信長', deed: '尾張国（愛知県）の戦国大名。安土城を建てる。本能寺で明智光秀に滅ぼされる。'},
-  {person: '武田信玄', deed: '甲斐国（山梨県）の戦国大名。上杉謙信と川中島でたびたび戦う。信玄堤を築く。'},
-  {person: '豊臣秀吉', deed: '尾張国の出身で、全国を統一。太閤検地・刀狩・朝鮮侵略などを行う。大阪城を築く。'},
-  {person: '徳川家康', deed: '三河国（愛知県）の出身。関ヶ原の戦いに勝利し、1603年、江戸に幕府を開く。'},
-  {person: '徳川家光', deed: '江戸幕府の3代将軍。武家諸法度に参勤交代を定める。鎖国を完成させる。'},
-  {person: '天草四郎', deed: '島原・天草一揆（島原 de 乱）のときの一揆軍の首領。'},
-  {person: '山田長政', deed: '江戸時代初め、シャム（タイ）のアユタヤにあった日本町の長。'},
-  {person: '徳川綱吉', deed: '江戸幕府の5代将軍。生類憐みの令を出し、「犬公方」と呼ばれる。元禄文化が栄える。'},
-  {person: '新井白石', deed: '朱子学の学者。江戸幕府の6・7代将軍に仕え、正徳の治を行う。長崎貿易を制限。'},
-  {person: '徳川吉宗', deed: '江戸幕府の8代将軍。享保の改革を行い、「米将軍」と呼ばれる。目安箱を設置。'},
-  {person: '田沼意次', deed: '江戸幕府の老中。株仲間を積極的に認め、長崎貿易を拡大した。'},
-  {person: '松平定信', deed: '徳川吉宗の孫。白河藩主から老中となり、寛政の改革を行った。'},
-  {person: '大塩平八郎', deed: '大阪町奉行所の元役人で、天保のききんのときに大阪で反乱を起こす。'},
-  {person: '水野忠邦', deed: '江戸幕府の老中。物価を下げるため、株仲間を解散させるなど、天保の改革を行う。'},
-  {person: '井伊直弼', deed: '江戸幕府の大老。日米修好通商条約を結ぶ。桜田門外の変で暗殺される。'},
-  {person: '吉田松陰', deed: '長州藩（山口県）の出身。私塾の松下村塾で教える。安政の大獄で処刑される。'},
-  {person: '坂本龍馬', deed: '土佐藩（高知県）の出身。薩長同盟を実現させる。'},
-  {person: '徳川慶喜', deed: '江戸幕府最後の15代将軍。1867年、大政奉還を申し出る。'},
-  {person: '岩倉具視', deed: '公家出身。王政復古を実現して明治政府の要職につく。岩倉使節団として欧米を視察。'},
-  {person: '西郷隆盛', deed: '薩摩藩（鹿児島県）の出身。征韓論を主張し政府を去る。西南戦争を起こすが敗れる。'},
-  {person: '大久保利通', deed: '薩摩藩の出身。版籍奉還・廃藩置県を実施し、殖産興業をすすめる。'},
-  {person: '木戸孝允', deed: '長州藩出身で吉田松陰に学ぶ。西郷隆盛・大久保利通とならび維新の三傑の一人。'},
-  {person: '板垣退助', deed: '土佐藩の出身。民選議員設立白書を政府に提出。自由党の党首。'},
-  {person: '大隈重信', deed: '佐賀藩（佐賀県）の出身。立憲改進党を結成。東京専門学校を設立。'},
-  {person: '伊藤博文', deed: '初代の内閣総理大臣。大日本帝国憲法の草案を作成。'},
-  {person: '渋沢栄一', deed: '日本初の銀行など、多くの会社を創設。新1万円札の肖像。'},
-  {person: '陸奥宗光', deed: '1894年、領事裁判権の撤廃に成功。日清戦争の講和会議に伊藤博文とともに出席。'},
-  {person: '小村寿太郎', deed: 'ポーツマス講和会議の全権。1911年、アメリカと交渉して関税自主権の回復に成功。'},
-  {person: '田中正造', deed: '栃木県出身の衆議院議員。足尾銅山鉱毒事件の解決に一生をささげる。'},
-  {person: '原敬', deed: '米騒動の直後、立憲政友会を中心に、初の本格的な政党内閣を組織。'},
-  {person: '尾崎行雄', deed: '犬養毅らとともに護憲運動・普通選挙運動を指導。「憲政の神様」と呼ばれる。'},
-  {person: '犬養毅', deed: '護憲運動の中心的人物。1932年の五・一五事件で暗殺され、政党政治が中断する。'},
-  {person: '吉田茂', deed: '日本国憲法が公布されたときの首相。サンフランシスコ平和条約・日米安全保障条約に調印。'},
-  {person: '佐藤栄作', deed: '日韓基本条約に調印。沖縄返還を実現。非核三原則を国会で決議。ノーベル平和賞。'},
-  {person: '田中角栄', deed: '1972年、日中国同声明を発表し、中国との国交正常化を実現。'},
-  {person: '杉田玄白', deed: '小浜藩（福井県）出身の蘭学者。オランダ語の医学書を翻訳し、「解体新書」を刊行。'},
-  {person: '前野良沢', deed: '中津藩（大分県）の医者・蘭学者。杉田玄白とともに「解体新書」を刊行。'},
-  {person: '本居宣長', deed: '松阪（三重県）出身の国学者。「古事記伝」を著し、国学を大成する。'},
-  {person: '高野長英', deed: '蘭学者で、シーボルトの弟子。鎖国政策を批判して、幕府に弾圧される。'},
-  {person: '伊能忠敬', deed: '佐原（千葉県）の商人。幕府の命令で全国を測量し、正確な日本地図を作成する。'},
-  {person: '福沢諭吉', deed: '中津藩の出身。「学問のすゝめ」の著者で慶應義塾を設立。'},
-  {person: '北里柴三郎', deed: '破傷風の血清療法とベスト菌を発見。感染症の研究所を設立。新千円札の肖像。'},
-  {person: '野口英世', deed: '細菌学者で黄熱病の研究に学ぶ。アフリカで黄熱病の研究中に死亡。'},
-  {person: '吉野作造', deed: '民主主義をとなえた大正デモクラシーの指導者。普通選挙と政党内閣の確立を主張。'},
-  {person: '湯川秀樹', deed: '物理学者。1949年に日本人で初のノーベル賞を受賞。'},
-  {person: '山上憶良', deed: '奈良時代の歌人。農民の生活をうたった「貧窮問答歌」が「万葉集」に収められる。'},
-  {person: '運慶', deed: '鎌倉時代の仏師。東大寺南大門の金剛力士像を制作。'},
-  {person: '雪舟', deed: '室町時代の僧侶。明にわたって絵を学び、帰国後、水墨画を大成。'},
-  {person: '世阿弥', deed: '足利義満の保護を受けて、父の観阿弥とともに能を大成。'},
-  {person: '千利休', deed: '堺の豪商で、茶道を大成。織田信長や豊臣秀吉に仕えた。'},
-  {person: '井原西鶴', deed: '元禄文化を代表する作家。「世間胸算用」などの浮世草子を著す。'},
-  {person: '松尾芭蕉', deed: '元禄時代の俳人で、俳諧を大成。紀行文の「おくのほそ道」など。'},
-  {person: '近松門左衛門', deed: '元禄時代の浄瑠璃・歌舞伎の脚本家。代表作は「曽根崎心中」など。'},
-  {person: '菱川師宣', deed: '元禄文化を代表する浮世絵師。代表作は「見返り美人図」。'},
-  {person: '葛飾北斎', deed: '化政文化を代表する浮世絵師。風景画にすぐれ、「富嶽三十六景」などを描く。'},
-  {person: '歌川広重', deed: '化政文化を代表する浮世絵師。「東海道五十三次」によって、風景画を大成する。'},
-  {person: '十返舎一九', deed: '化政文化のころの作家。「東海道中膝栗毛」が代表作。'},
-  {person: '行基', deed: '諸国をまわって社会事業につくす。東大寺の大仏づくりに協力。'},
-  {person: '最澄', deed: '9世紀、唐から天台宗を伝え、比叡山に延暦寺を建てる。'},
-  {person: '空海', deed: '9世紀、唐から真言宗を伝え、高野山に金剛峯寺を建てる。'},
-  {person: '法然', deed: '比叡山で学んだ後、浄土宗を開く。ひたすら念仏をとなえれば救われると説く。'},
-  {person: '親鸞', deed: '比叡山で学んだ後、法然の弟子となり、浄土真宗を開く。'},
-  {person: '一遍', deed: '踊りながら念仏をとなえる踊り念仏により、時宗を広める。'},
-  {person: '日蓮', deed: '日蓮宗を開く。「南無妙法蓮華経」の題目をとなえることを説く。'},
-  {person: '栄西', deed: '宋から、禅宗の臨済宗を伝える。'},
-  {person: '道元', deed: '宋から、禅宗の曹洞宗を伝える。'},
-  {person: '釈迦', deed: '紀元前5世紀ごろ、仏教を開く。'},
-  {person: 'イエス・キリスト', deed: '1世紀前半にキリスト教を開く。'},
-  {person: 'ムハンマド', deed: '7世紀にイスラム教を開く。'},
-  {person: '鑑真', deed: '唐の高僧。5度の失敗の後、753年に日本へ来るが、その間に失明。唐招提寺を建立。'},
-  {person: 'フビライ・ハン', deed: '元の皇帝。2度にわたり日本を攻める。'},
-  {person: 'マルコ・ポーロ', deed: 'イタリアの商人でフビライ・ハンに仕え、その体験を「東方見聞録」に残す。'},
-  {person: 'フランシスコ・ザビエル', deed: 'スペイン人の宣教師。1549年、鹿児島に来て日本にキリスト教を伝える。'},
-  {person: 'シャクシャイン', deed: '1669年、松前藩による不正な取り引きに反発し、アイヌの人々を率いて反乱を起こす。'},
-  {person: 'シーボルト', deed: 'ドイツ人。長崎の出島におかれたオランダ商館の医師。鳴滝塾を開く。'},
-  {person: 'リンカーン', deed: 'アメリカ大統領。民主政治を「人民の、人民による、人民のための政治」と表現した。'},
+  {person: '藤原道長', deed: '娘を次々と天皇のきさきにして、摂政として摂関政治の全盛期を築く。'},
+  {person: '菅原道真', deed: '遣唐使の廃止を提案。後に九州の大宰府に流され、現在は学問の神様。'},
+  {person: '行基', deed: '仏教を広める一方、橋やため池をつくる。聖武天皇に協力して大仏建立を助ける。'},
+  {person: '鑑真', deed: '唐の僧。何度も失敗して来日。唐招提寺を建てる。'},
+  {person: '最澄', deed: '比叡山に延暦寺を建て、天台宗を広める。'},
+  {person: '空海', deed: '高野山に金剛峰寺を建て、真言宗を広める。'},
+  {person: '阿倍仲麻呂', deed: '遣唐使として唐に渡るが、帰国できずに唐の政府で役人として一生を終える。'},
+  {person: '小野妹子', deed: '最初の遣隋使として隋へ。聖徳太子の手紙を隋の皇帝に渡す。'},
+  {person: '平清盛', deed: '武士として初めて太政大臣になる。日宋貿易。'},
+  {person: '源頼朝', deed: '鎌倉幕府を開き、征夷大将軍になる。'},
+  {person: '源義経', deed: '源頼朝の弟。平氏を壇ノ浦の戦いで滅ぼす。'},
+  {person: '北条泰時', deed: '鎌倉幕府の3代執権。御成敗式目を制定する。'},
+  {person: '北条時宗', deed: '鎌倉幕府の8代執権。2度の元寇（文永の役・弘安の役）に対処。'},
+  {person: '足利尊氏', deed: '後醍醐天皇に協力して鎌倉幕府を倒すが、後に反目して室町幕府を開く。'},
+  {person: '足利義満', deed: '室町幕府の3代将軍。南北朝を統一し、金閣を建てる。日明貿易。'},
+  {person: '足利義政', deed: '室町幕府の8代将軍。銀閣を建てる。応仁の乱の原因を作る。'},
+  {person: '武田信玄', deed: '甲斐の戦国大名。上杉謙信と川中島で何度も戦う。'},
+  {person: '上杉謙信', deed: '越後の戦国大名。武田信玄のライバル。'},
+  {person: '織田信長', deed: '室町幕府を滅ぼし、天下統一を目指す。本能寺の変で。'},
+  {person: '豊臣秀吉', deed: '天下統一を果たす。太閤検地や刀狩を行う。'},
+  {person: '徳川家康', deed: '江戸幕府を開き、260年続く太平の世の礎を築く。'},
+  {person: '徳川家光', deed: '江戸幕府の3代将軍。参勤交代を定例化し、鎖国を完成させる。'},
+  {person: '徳川綱吉', deed: '江戸幕府の5代将軍。生類憐みの令を出す。朱子学を奨励。'},
+  {person: '徳川吉宗', deed: '江戸幕府の8代将軍。享保の改革を行う。目安箱を設置。'},
+  {person: '徳川慶喜', deed: '江戸幕府の最後の将軍。大政奉還を行う。'},
+  {person: '田沼意次', deed: '老中として商業を重視する政治を行うが、わいろが横行し批判される。'},
+  {person: '松平定信', deed: '白河藩主から老中になり、寛政の改革を行う。'},
+  {person: '水野忠邦', deed: '老中として天保の改革を行う。株仲間の解散。'},
+  {person: '大塩平八郎', deed: '元大阪町奉行所の役人。飢饉に苦しむ人々を救うため乱を起こす。'},
+  {person: '西郷隆盛', deed: '薩摩藩士。薩長同盟を結ぶ。明治新政府で活躍するが、後に西南戦争。'},
+  {person: '大久保利通', deed: '薩摩藩士。岩倉使節団に参加。内務卿として新政府の基礎を固める。'},
+  {person: '木戸孝允', deed: '長州藩士（桂小五郎）。版籍奉還や廃藩置県を推進。'},
+  {person: '坂本龍馬', deed: '土佐藩出身。薩長同盟の仲立ちをする。'},
+  {person: '勝海舟', deed: '幕臣。咸臨丸で渡米。西郷隆盛と会談し、江戸城無血開城を実現。'},
+  {person: '伊藤博文', deed: '初代内閣総理大臣。大日本帝国憲法の制定に関わる。'},
+  {person: '板垣退助', deed: '自由民権運動の指導者。野党を、自由党を結成。'},
+  {person: '大隈重信', deed: '立憲改進党を結成。早稲田大学を創設。'},
+  {person: '陸奥宗光', deed: '外務大臣として、日清戦争直前に領事裁判権の撤廃に成功。'},
+  {person: '小村寿太郎', deed: '外務大臣として、日露戦争後に、関税自主権の完全回復に成功。'},
+  {person: '明治天皇', deed: '五か条の御誓文を出し、近代国家の基礎を築く。'},
+  {person: '山県有朋', deed: '徴兵制を確立。内閣総理大臣を2度務める。軍部大臣現役武官制。'},
+  {person: '原敬', deed: '初の本格的な政党内閣を組織。「平民宰相」と呼ばれる。'},
+  {person: '犬養毅', deed: '五・一五事件で暗殺される。政党政治の終焉。'},
+  {person: '吉田茂', deed: '戦後の首相。サンフランシスコ平和条約を結ぶ。'},
+  {person: '佐藤栄作', deed: '非核三原則を提唱。沖縄返還を実現。'},
+  {person: '田中角栄', deed: '日中国交正常化を実現。「日本列島改造論」。'},
+  {person: '雪舟', deed: '水墨画を日本風に完成させる。'},
+  {person: '狩野永徳', deed: '安土桃山時代の絵師。「唐獅子図屏風」など。'},
+  {person: '葛飾北斎', deed: '江戸時代の浮世絵師。「富嶽三十六景」。'},
+  {person: '歌川広重', deed: '江戸時代の浮世絵師。「東海道五十三次」。'},
+  {person: '菱川師宣', deed: '浮世絵の祖。「見返り美人図」。'},
+  {person: '本居宣長', deed: '「古事記伝」を著し、国学を大成する。'},
+  {person: '杉田玄白', deed: '「解体新書」を出版。蘭学の発展に貢献。'},
+  {person: '伊能忠敬', deed: '日本全国を測量し、正確な日本地図を作成。'},
+  {person: '紫式部', deed: '「源氏物語」の著者。'},
+  {person: '清少納言', deed: '「枕草子」の著者。'},
+  {person: '近松門左衛門', deed: '人形浄瑠璃・歌舞伎の脚本家。「曽根崎心中」。'},
+  {person: '松尾芭蕉', deed: '俳諧を芸術に高める。「おくのほそ道」。'},
+  {person: '夏目漱石', deed: '「吾輩は猫である」「坊っちゃん」「こころ」の著者。'},
+  {person: '森鴎外', deed: '「舞姫」「阿部一族」の著者。医学博士。'},
+  {person: '芥川龍之介', deed: '「羅生門」「鼻」「河童」の著者。'},
+  {person: '宮沢賢治', deed: '「銀河鉄道の夜」「注文の多い料理店」。「雨ニモマケズ」。'},
+  {person: '太宰治', deed: '「走れメロス」「人間失格」の著者。'},
+  {person: '福沢諭吉', deed: '「学問のすゝめ」を著す。慶應義塾の創設。'},
+  {person: '新渡戸稲造', deed: '「武士道」の著者。国際連盟次長。'},
+  {person: '内村鑑三', deed: 'キリスト教思想家。非戦論を唱える。'},
+  {person: '北里柴三郎', deed: '細菌学者。ペスト菌の発見。破傷風の治療法を開発。'},
+  {person: '野口英世', deed: '細菌学者。黄熱病の研究中にアフリカで病死。'},
+  {person: '志賀潔', deed: '赤痢菌の発見者。'},
+  {person: '高峰譲吉', deed: 'アドレナリンの抽出、タカジアスターゼの開発。'},
+  {person: '鈴木梅太郎', deed: 'ビタミンB1（オリザニン）の発見。'},
+  {person: '長岡半太郎', deed: '原子モデルの研究。'},
+  {person: '湯川秀樹', deed: '日本人初のノーベル賞受賞者（物理学賞）。中間子の存在を予言。'},
+  {person: '朝永振一郎', deed: 'ノーベル物理学賞受賞。量子電磁力学の研究。'},
+  {person: '黒澤明', deed: '映画監督。「羅生門」「七人の侍」。'},
+  {person: '手塚治虫', deed: '漫画家。「鉄腕アトム」「火の鳥」。'},
+  {person: '聖徳太子', deed: '十七条の憲法、冠位十二階。'},
+  {person: '空海', deed: '真言宗。高野山。'},
+  {person: '最澄', deed: '天台宗。比叡山。'},
+  {person: '法然', deed: '浄土宗。専修念仏。'},
+  {person: '親鸞', deed: '浄土真宗。悪人正機。'},
+  {person: '一遍', deed: '時宗。踊念仏。'},
+  {person: '栄西', deed: '臨済宗。座禅。茶の普及。'},
+  {person: '道元', deed: '曹洞宗。只管打坐。'},
+  {person: '日蓮', deed: '日蓮宗。お題目。'},
+  {person: 'フランシスコ・ザビエル', deed: 'キリスト教を日本に伝える。'},
+  {person: 'マルコ・ポーロ', deed: '「世界の記述」で日本を黄金の国ジパングと紹介。'},
   {person: 'ペリー', deed: '1853年、黒船を率いて来航。日米和親条約を結ぶ。'},
   {person: 'ハリス', deed: '初代のアメリカ総領事。1858年、日米修好通商条約を結ぶ。'},
   {person: 'マッカーサー', deed: '連合国軍最高司令官。戦後の日本の占領政策をすすめた。'}
 ];
+
+/* --- Configuration & Labels --- */
+const YEAR_STAGE_LABELS = ['古代①','古代②','中世①','中世②','近世①','近世②','近代①','近代②','昭和①','昭和・平成'];
+const PERSON_STAGE_LABELS = ['伝説・古代の女性','古代の天皇・政治家','奈良・平安の知識人','平安・鎌倉の武士','室町・戦国の英雄','江戸の政治と一揆','幕末・維新の志士','明治・大正の政治','昭和・現代の歩み','古典芸術・作家①','古典芸術・作家②','宗教家・思想家'];
 
 const ROLES = [
   { lv: 1, title: '見習い剣士' },
@@ -237,6 +246,209 @@ const ROLES = [
   { lv: 99, title: '歴史の神' }
 ];
 
+/* --- Global State --- */
+let gameMode = 'year'; 
+let currentStage = 0;
+let currentQuestions = [];
+let currentIdx = 0;
+let score = 0;
+let currentUser = null;
+let userLv = 1;
+let userXP = 0;
+let progress = { year: Array(10).fill(0), person: Array(12).fill(0) };
+let records = [];
+
+/* --- Rendering --- */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function updateBars() {
+    const role = getRole(userLv);
+    const next = getNextRole(userLv);
+    document.getElementById('user-name-display').textContent = currentUser ? currentUser.name : 'ゲスト';
+    document.getElementById('user-role-display').textContent = role.title;
+    document.getElementById('user-lv').textContent = userLv;
+    
+    // XP Bar
+    const xpNeeded = userLv * 100;
+    const pct = Math.min(100, (userXP / xpNeeded) * 100);
+    document.getElementById('xp-fill').style.width = pct + '%';
+
+    // Rank Info in Progress Screen
+    const rankInfo = document.getElementById('rank-info');
+    if (rankInfo) {
+        rankInfo.innerHTML = `
+            <div>現在の役職: <span class="highlight">${role.title}</span> (Lv.${userLv})</div>
+            ${next.lv > userLv ? `<div>次なる高み: <span class="highlight">${next.title}</span> (Lv.${next.lv}で昇進)</div>` : '<div>あなたは歴史の頂点に達しました！</div>'}
+        `;
+    }
+}
+
+function renderStageGrid() {
+  const grid = document.getElementById('stage-grid');
+  grid.innerHTML = '';
+  
+  const labels = gameMode === 'year' ? YEAR_STAGE_LABELS : PERSON_STAGE_LABELS;
+  const dataRef = gameMode === 'year' ? YEAR_DATA : PERSON_DATA;
+  const progArr = gameMode === 'year' ? progress.year : progress.person;
+
+  labels.forEach((label, i) => {
+    const btn = document.createElement('div');
+    btn.className = 'stage-card';
+    const high = progArr[i] || 0;
+    btn.innerHTML = `
+      <div class="stage-num">STAGE ${i+1}</div>
+      <div class="stage-label">${label}</div>
+      <div class="stage-best">Best: ${high}/10</div>
+    `;
+    btn.onclick = () => startStage(i);
+    grid.appendChild(btn);
+  });
+}
+
+function setMode(mode) {
+  gameMode = mode;
+  document.getElementById('tab-year').classList.toggle('active', mode==='year');
+  document.getElementById('tab-person').classList.toggle('active', mode==='person');
+  renderStageGrid();
+}
+
+function startStage(stageIdx) {
+  currentStage = stageIdx;
+  score = 0;
+  currentIdx = 0;
+  
+  const dataSet = gameMode === 'year' ? YEAR_DATA : PERSON_DATA;
+  const slice = dataSet.slice(stageIdx * 10, (stageIdx + 1) * 10);
+  
+  currentQuestions = slice.map(item => {
+    if (gameMode === 'year') {
+      return Math.random() > 0.5 ? 
+        { q: `${item.event}が起きた年は？`, a: item.year.toString() } :
+        { q: `${item.year}年に起きた出来事は？`, a: item.event };
+    } else {
+      return Math.random() > 0.5 ?
+        { q: `${item.person}の功績は？`, a: item.deed } :
+        { q: `${item.deed}を行った人物は？`, a: item.person };
+    }
+  });
+
+  // Shuffle questions
+  currentQuestions.sort(() => Math.random() - 0.5);
+
+  showScreen('screen-quiz');
+  nextQuestion();
+}
+
+function nextQuestion() {
+  if (currentIdx >= currentQuestions.length) {
+    endQuiz();
+    return;
+  }
+  const qObj = currentQuestions[currentIdx];
+  document.getElementById('quiz-q').textContent = qObj.q;
+  document.getElementById('quiz-input').value = '';
+  document.getElementById('quiz-input').focus();
+  document.getElementById('quiz-progress').textContent = `${currentIdx+1} / 10`;
+}
+
+function submitAnswer() {
+  const input = document.getElementById('quiz-input').value.trim();
+  const correct = currentQuestions[currentIdx].a;
+  
+  // Fuzzy match for text
+  let isCorrect = (input === correct);
+  if (!isCorrect && isNaN(Number(correct))) {
+      // Very simple fuzzy: if input is part of answer or vice versa and length > 2
+      if (input.length >= 2 && (correct.includes(input) || input.includes(correct))) {
+          isCorrect = true;
+      }
+  }
+
+  if (isCorrect) {
+    score++;
+    showToast("正解！", "success");
+  } else {
+    showToast(`残念！ 正解は: ${correct}`, "error");
+  }
+
+  currentIdx++;
+  nextQuestion();
+}
+
+function endQuiz() {
+  showScreen('screen-result');
+  document.getElementById('result-score').textContent = score;
+  
+  // Update Progress
+  const progArr = gameMode === 'year' ? progress.year : progress.person;
+  if (score > progArr[currentStage]) progArr[currentStage] = score;
+
+  // XP & Level
+  const gainedXP = score * 10;
+  userXP += gainedXP;
+  while (userXP >= userLv * 100) {
+    userXP -= userLv * 100;
+    userLv++;
+    showToast(`レベルアップ！ Lv.${userLv}になりました！`, "success");
+  }
+
+  // Record
+  records.unshift({
+      date: new Date().toLocaleString(),
+      mode: gameMode==='year' ? '年号' : '人物',
+      stage: currentStage + 1,
+      score: score
+  });
+  if(records.length > 20) records.pop();
+
+  updateBars();
+  saveLocal();
+
+  // Full Score Celebration
+  if (score === 10) {
+      celebratePerfect();
+  }
+}
+
+function celebratePerfect() {
+    const overlay = document.getElementById('certOverlay');
+    overlay.querySelector('.cert-body').innerHTML = `
+        <h3>合格証書</h3>
+        <p>${currentUser ? currentUser.name : '歴史の探究者'} 殿</p>
+        <p>貴殿は「${gameMode==='year' ? YEAR_STAGE_LABELS[currentStage] : PERSON_STAGE_LABELS[currentStage]}」における<br>全ての試練を見事に突破いたしました。</p>
+        <p>その卓越した知識を讃え、ここに証します。</p>
+        <div style="font-size:0.8rem; margin-top:20px;">称号: ${getRole(userLv).title}</div>
+    `;
+    overlay.classList.add('active');
+}
+
+function closeCert() {
+    document.getElementById('certOverlay').classList.remove('active');
+}
+
+function showProgress() {
+    showScreen('screen-progress');
+    const log = document.getElementById('record-log');
+    log.innerHTML = records.map(r => `
+        <div class="record-item">
+            <span>[${r.date}]</span> <strong>${r.mode} STAGE ${r.stage}</strong> - ${r.score}点
+        </div>
+    `).join('');
+    updateBars();
+}
+
+function showToast(msg, type="info") {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type === 'success' ? '#2ecc71' : (type === 'error' ? '#e74c3c' : '#3498db');
+  t.classList.add('active');
+  setTimeout(() => t.classList.remove('active'), 2500);
+}
+
+/* --- Role Logic --- */
 function getRole(lv) {
   let res = ROLES[0];
   for (let r of ROLES) {
@@ -252,346 +464,17 @@ function getNextRole(lv) {
   return ROLES[ROLES.length - 1];
 }
 
-/* --- Global State --- */
-let currentUser = null;
-let localData = []; // OCR/User Manual Data
-let currentSeries = 'year'; // 'year' or 'person'
-let curMode = 'yearToEvent'; 
-let currentStage = null;
-let quizList = [];
-let quizIndex = 0;
-let quizScore = 0;
-let playerHP = 5;
-let playerMaxHP = 5;
-let userXP = 0;
-let userLv = 1;
-let records = [];
-let progress = {}; // { year: [s1, s2...], person: [s1, s2...] }
-
-const STAGE_SIZE = 10;
-
-/* --- UI Controls --- */
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  window.scrollTo(0,0);
-}
-
-function switchTab(id) {
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  const content = document.getElementById(`tab-${id}`);
-  if(content) content.classList.add('active');
-  const btn = document.getElementById(`tabBtn${id === 'quest' ? 2 : 3}`);
-  if(btn) btn.classList.add('active');
-  if(id === 'records') renderRecords();
-}
-
-function setSeries(s) {
-  currentSeries = s;
-  document.getElementById('btnSeriesYear').classList.toggle('active', s === 'year');
-  document.getElementById('btnSeriesPerson').classList.toggle('active', s === 'person');
-  renderStageGrid();
-}
-
-function setMode(m, btn) {
-  curMode = m;
-  document.querySelectorAll('#tab-quest .btn-sm').forEach(b => {
-    if(b.id.startsWith('modeBtn')) b.classList.remove('active');
-  });
-  btn.classList.add('active');
-}
-
-/* --- Logic: Stage & Quiz --- */
-function renderStageGrid() {
-  const grid = document.getElementById('stageGrid');
-  grid.innerHTML = '';
-  const data = currentSeries === 'year' ? YEAR_DATA : PERSON_DATA;
-  const labels = currentSeries === 'year' ? YEAR_STAGE_LABELS : PERSON_STAGE_LABELS;
-  const count = Math.ceil(data.length / STAGE_SIZE);
-  
-  const prog = progress[currentSeries] || [];
-
-  for(let i=1; i<=count; i++) {
-    const isLocked = i > 1 && !prog.includes(i-1);
-    const label = labels[i-1] || `ST ${i}`;
-    const btn = document.createElement('button');
-    btn.className = 'btn-sm';
-    btn.style.padding = '12px 0';
-    btn.innerHTML = `${label}${prog.includes(i)?'<br>✅':''}`;
-    if(isLocked) {
-      btn.style.opacity = '0.4';
-      btn.innerHTML = `${label}<br>🔒`;
-    } else {
-      btn.onclick = () => startStage(i);
-    }
-    grid.appendChild(btn);
-  }
-}
-
-function startStage(num) {
-  currentStage = num;
-  const data = currentSeries === 'year' ? YEAR_DATA : PERSON_DATA;
-  const start = (num - 1) * STAGE_SIZE;
-  const items = data.slice(start, start + STAGE_SIZE);
-  
-  _prepareQuiz(items);
-}
-
-function startQuiz(mode) {
-    const data = (localData.length > 0) ? localData : (currentSeries === 'year' ? YEAR_DATA : PERSON_DATA);
-    if(data.length === 0) {
-        showToast("データがありません");
-        return;
-    }
-    currentStage = null;
-    curMode = mode;
-    _prepareQuiz(data.slice(0, 10)); // Just 10 random if manual
-}
-
-function _prepareQuiz(items) {
-  quizList = items.map(it => {
-    const type = curMode === 'random' ? (Math.random() > 0.5 ? 1 : 2) : (curMode === 'yearToEvent' ? 1 : 2);
-    return { ...it, type };
-  }).sort(() => Math.random() - 0.5);
-  
-  quizIndex = 0;
-  quizScore = 0;
-  playerHP = 5;
-  document.getElementById('battleLog').innerHTML = '<div>バトル開始！</div>';
-  updateBars();
-  showScreen('screen-battle');
-  renderQuestion();
-}
-
-function renderQuestion() {
-  const q = quizList[quizIndex];
-  document.getElementById('enemyHP').style.width = '100%';
-  document.getElementById('battleBadge').textContent = currentStage ? `STAGE ${currentStage} - ${quizIndex+1}/10` : '特別試練';
-  
-  const qText = document.getElementById('battleQ');
-  if (currentSeries === 'person') {
-    qText.innerHTML = q.type === 1 
-      ? `「${q.person}」は<br>何をした人物？`
-      : `「${q.deed}」<br>この人物はだれ？`;
-  } else {
-    qText.innerHTML = q.type === 1
-      ? `西暦 ${q.year}年<br>何が起きた？`
-      : `「${q.event}」<br>西暦何年？`;
-  }
-  
-  const input = document.getElementById('battleInput');
-  input.value = '';
-  input.disabled = false;
-  input.type = (currentSeries === 'year' && q.type === 2) ? 'number' : 'text';
-  input.focus();
-  
-  document.getElementById('btnAttack').style.display = 'block';
-  document.getElementById('btnNext').style.display = 'none';
-}
-
-function checkAnswer() {
-  const q = quizList[quizIndex];
-  const ua = document.getElementById('battleInput').value.trim();
-  let ok = false;
-  
-  if (currentSeries === 'person') {
-    const target = q.type === 1 ? q.deed : q.person;
-    ok = calculateSimilarity(target, ua) >= 0.4 || target.includes(ua) && ua.length >= 2;
-  } else {
-    if (q.type === 1) {
-      // For events, if the answer is long but partially matches, or if it's a direct substring
-      ok = calculateSimilarity(q.event, ua) >= 0.4 || q.event.includes(ua) && ua.length >= 2;
-    } else {
-      ok = Number(ua) === q.year;
-    }
-  }
-  
-  document.getElementById('btnAttack').style.display = 'none';
-  document.getElementById('btnNext').style.display = 'block';
-  document.getElementById('battleInput').disabled = true;
-  
-  if(ok) {
-    quizScore++;
-    addLog(`✨ 正解！`, 'green');
-    document.getElementById('enemyHP').style.width = '0%';
-  } else {
-    playerHP--;
-    addLog(`💥 ミス！ 正解は「${currentSeries === 'year' ? (q.type===1?q.event:q.year) : (q.type===1?q.deed:q.person)}」`, 'red');
-    updateBars();
-  }
-  
-  if(playerHP <= 0) {
-    setTimeout(() => finishQuiz(false), 1000);
-  }
-}
-
-function nextQuestion() {
-  quizIndex++;
-  if(quizIndex >= quizList.length) {
-    finishQuiz(true);
-  } else {
-    renderQuestion();
-  }
-}
-
-function finishQuiz(win) {
-  const bonus = win ? quizScore * 10 : quizScore * 5;
-  userXP += bonus;
-  if(userXP >= userLv * 100) {
-    userXP -= userLv * 100;
-    userLv++;
-    document.getElementById('lvUpArea').style.display = 'block';
-  } else {
-    document.getElementById('lvUpArea').style.display = 'none';
-  }
-  
-  const d = new Date();
-  records.unshift({
-    date: `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`,
-    series: currentSeries === 'year' ? '年号' : '人物',
-    score: quizScore,
-    win: win
-  });
-  if(records.length > 20) records.pop();
-
-  if(win && quizScore === STAGE_SIZE && currentStage) {
-    if(!progress[currentSeries]) progress[currentSeries] = [];
-    if(!progress[currentSeries].includes(currentStage)) progress[currentSeries].push(currentStage);
-  }
-  saveLocal();
-  
-  document.getElementById('rTitle').textContent = win ? '勝利！' : '敗北...';
-  document.getElementById('rsCorrect').textContent = quizScore;
-  document.getElementById('rsWrong').textContent = quizList.length - quizScore;
-  document.getElementById('rsXP').textContent = `+${bonus}`;
-  
-  // 満点お祝い
-  const celeb = document.getElementById('perfectCeleb');
-  if (win && quizScore === 10) {
-    celeb.style.display = 'block';
-    showCert(); // Award certificate for every perfect score
-    // 盛大に祝う
-    const duration = 3 * 1000;
-    const end = Date.now() + duration;
-
-    (function frame() {
-      confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 } });
-      confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 } });
-      if (Date.now() < end) requestAnimationFrame(frame);
-    }());
-  } else {
-    celeb.style.display = 'none';
-  }
-
-  updateBars();
-  showScreen('screen-result');
-}
-
-/* --- UI Utilities --- */
-function updateBars() {
-  const role = getRole(userLv);
-  const next = getNextRole(userLv);
-  const nextXP = userLv * 100;
-
-  document.getElementById('headerLv').textContent = `Lv.${userLv}`;
-  document.getElementById('headerClass').textContent = role.title;
-  document.getElementById('headerXP').textContent = userXP;
-  document.getElementById('nextLVXP').textContent = nextXP;
-  document.getElementById('headerXPBar').style.width = `${(userXP / nextXP) * 100}%`;
-  
-  document.getElementById('nextRole').textContent = next.title;
-  document.getElementById('nextRoleLv').textContent = next.lv - userLv <= 0 ? 0 : next.lv - userLv;
-
-  if(document.getElementById('screen-battle').classList.contains('active')) {
-    document.getElementById('playerHP').style.width = `${(playerHP/playerMaxHP)*100}%`;
-    document.getElementById('playerHPText').textContent = `HP ${playerHP}/${playerMaxHP}`;
-  }
-}
-
-function addLog(msg, color) {
-  const log = document.getElementById('battleLog');
-  const d = document.createElement('div');
-  d.style.color = color || 'white';
-  d.textContent = msg;
-  log.appendChild(d);
-  log.scrollTop = log.scrollHeight;
-}
-
-function showToast(m) {
-  const t = document.getElementById('toast');
-  t.textContent = m;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2000);
-}
-
-function showCert() {
-  const name = (currentUser ? currentUser.name : '冒険者');
-  const seriesName = currentSeries === 'year' ? '年号' : '人物';
-  const labels = currentSeries === 'year' ? YEAR_STAGE_LABELS : PERSON_STAGE_LABELS;
-  const stageLabel = currentStage ? labels[currentStage-1] : '特別（ランダム）';
-  
-  document.getElementById('certName').textContent = name + ' 殿';
-  document.getElementById('certDate').textContent = new Date().toLocaleDateString('ja-JP');
-  
-  // Update body text
-  const body = document.querySelector('.cert-body');
-  if(body) {
-    body.innerHTML = `あなたは「歴史クエスト」の<br>【${seriesName}：${stageLabel}】<br>において すべての しれんを<br>かんぺきに ときあかしました！`;
-  }
-
-  document.getElementById('certOverlay').classList.add('active');
-  confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-}
-
-function closeCert() {
-  document.getElementById('certOverlay').classList.remove('active');
-}
-
-function goHome() {
-  showScreen('screen-main');
-  renderStageGrid();
-}
-
-/* --- Similarity (Simple character match) --- */
-function calculateSimilarity(s1, s2) {
-  if(!s1 || !s2) return 0;
-  const v1 = s1.trim().replace(/[、。！？\s]/g, '');
-  const v2 = s2.trim().replace(/[、。！？\s]/g, '');
-  const set1 = new Set(v1);
-  const set2 = new Set(v2);
-  const common = [...set2].filter(x => set1.has(x)).length;
-  return common / Math.max(1, v2.length); // How much of the user's answer is in the target
-}
-
-/* --- Storage & Auth --- */
-function renderRecords() {
-  const list = document.getElementById('recordsList');
-  list.innerHTML = '';
-  if(records.length === 0) { list.innerHTML = '<p style="text-align:center; opacity:0.5;">まだ記録がありません</p>'; return; }
-
-  let totalClear = 0;
-  let perfects = 0;
-  let totalXP = 0; // Calculate from records if needed, or keep global
-
-  records.forEach(r => {
-    const div = document.createElement('div');
-    div.className = 'data-item';
-    div.innerHTML = `<span>[${r.date}] ${r.series}</span> <span>${r.score}/10 ${r.win?'⭕':'❌'}</span>`;
-    list.appendChild(div);
-    if(r.win) totalClear++;
-    if(r.score === 10) perfects++;
-  });
-
-  document.getElementById('statTotal').textContent = totalClear;
-  document.getElementById('statPerfect').textContent = perfects;
-}
-
+/* --- Persistence --- */
 function saveLocal() {
-    localStorage.setItem('hist_quiz_v2', JSON.stringify({ userLv, userXP, progress, records }));
+    const d = { currentUser, userLv, userXP, progress, records };
+    localStorage.setItem('histRPG_data', JSON.stringify(d));
 }
+
 function loadLocal() {
-    const d = JSON.parse(localStorage.getItem('hist_quiz_v2') || '{}');
+    const raw = localStorage.getItem('histRPG_data');
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if(d.currentUser) currentUser = d.currentUser;
     if(d.userLv) userLv = d.userLv;
     if(d.userXP) userXP = d.userXP;
     if(d.progress) progress = d.progress;
@@ -609,16 +492,8 @@ function handleLogin(e) {
 
 function logout() {
   currentUser = null;
-  showScreen('screen-auth');
-}
-
-function manualAdd() {
-    const y = document.getElementById('manualYear').value;
-    const e = document.getElementById('manualEvent').value;
-    if(!y || !e) return;
-    localData.push({ year: Number(y), event: e });
-    document.getElementById('dataCount').textContent = localData.length;
-    showToast("追加しました");
+  localStorage.removeItem('histRPG_data'); // Clear for demo
+  location.reload();
 }
 
 /* --- Init --- */
@@ -626,5 +501,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadLocal();
     showScreen('screen-auth'); 
     // Ensure cert is hidden initially
-    document.getElementById('certOverlay').classList.remove('active');
+    const cert = document.getElementById('certOverlay');
+    if(cert) cert.classList.remove('active');
 });
