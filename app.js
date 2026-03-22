@@ -1,6 +1,7 @@
 /**
  * 勉強RPG 歴史クエスト
  * app.js - Optimized for Root index.html (Retro UI)
+ * FIX: Added missing currentIdx increment
  */
 
 /* --- Supabase Config (Mock Placeholder) --- */
@@ -122,7 +123,7 @@ const PERSON_DATA = [
   {person: '清少納言', deed: '随筆「枕草子」の作者。藤原道長の兄の娘である定子の家庭教師。'},
   {person: '北条政子', deed: '源頼朝の妻。頼朝の死後、尼将軍と呼ばれる。承久の乱のとき、御家人をはげます。'},
   {person: '樋口一葉', deed: '明治時代の小説家。「にごりえ」「たけくらべ」などを著す。五千円札の肖像。'},
-  {person: '津田梅子', deed: '日本初の女子留学生の1人。女子英学塾を創設し英語教育。五千円札の肖像。'},
+  {person: '津田梅子', deed: '日本初の女子留学生の1人。女子英学塾を創設し英語教育。五千円札の肖像. '},
   {person: '与謝野晶子', deed: '歌人。日露戦争に出征した弟を案じ、詩「君死にたまふことなかれ」を発表。'},
   {person: '平塚らいてう', deed: '市川房枝らとともに女性の解放や参政権を求める運動を展開。雑誌「青鞜」を創刊。'},
   {person: '雄略天皇', deed: '5世紀の後の五王の1人。倭王武。埼玉県稲荷山古墳の鉄剣にその名がある。'},
@@ -130,7 +131,7 @@ const PERSON_DATA = [
   {person: '聖徳太子', deed: '冠位十二階・十七条の憲法を制定。小野妹子を遣隋使として送る。'},
   {person: '中大兄皇子', deed: '蘇我氏を滅ぼして大化の改新を始める。後に、大津で即位して天智天皇に。'},
   {person: '元明天皇', deed: '710年に都を藤原京から平城京に移した女性の天皇。'},
-  {person: '聖武天皇', deed: '国ごとに国分寺を、東大寺に大仏をつくることを命令。墾田永年私財法を制定. '},
+  {person: '聖武天皇', deed: '国ごとに国分寺を、東大寺に大仏をつくることを命令。墾田永年私財法を制定。'},
   {person: '桓武天皇', deed: '平安京に都を移し、律令政治の立て直しに努める。坂上田村麻呂を東北地方に派遣。'},
   {person: '白河上皇', deed: '1086年、天皇をしりぞいて上皇となり、院政を始める。'},
   {person: '後鳥羽上皇', deed: '鎌倉幕府を倒しようと承久の乱を起こすが、幕府軍に敗れ、隠岐に流される。'},
@@ -201,7 +202,7 @@ const PERSON_DATA = [
   {person: '宮沢賢治', deed: '「銀河鉄道の夜」「注文の多い料理店」。「雨ニモマケズ」。'},
   {person: '太宰治', deed: '「走れメロス」「人間失格」の著者。'},
   {person: '福沢諭吉', deed: '「学問のすゝめ」を著す。慶應義塾の創設。'},
-  {person: '新渡戸稲造', deed: '「武士道」の著者。国際連盟次長. '},
+  {person: '新渡戸稲造', deed: '「武士道」の著者。国際連盟次長。'},
   {person: '内村鑑三', deed: 'キリスト教思想家。非戦論を唱える。'},
   {person: '北里柴三郎', deed: '細菌学者。ペスト菌の発見。破傷風の治療法を開発。'},
   {person: '野口英世', deed: '細菌学者。黄熱病の研究中にアフリカで病死。'},
@@ -216,7 +217,7 @@ const PERSON_DATA = [
   {person: '聖徳太子', deed: '十七条の憲法、冠位十二階。'},
   {person: '空海', deed: '真言宗。高野山。'},
   {person: '最澄', deed: '天台宗。比叡山。'},
-  {person: '法然', deed: '浄土宗。専修念仏。'},
+  {person: '法然', deed: '浄土宗. 専修念仏。'},
   {person: '親鸞', deed: '浄土真宗。悪人正機。'},
   {person: '一遍', deed: '時宗。踊念仏。'},
   {person: '栄西', deed: '臨済宗。座禅。茶の普及。'},
@@ -327,9 +328,6 @@ function switchTab(tabId) {
     const content = document.getElementById(`tab-${tabId}`);
     if (content) content.classList.add('active');
     
-    // Find button - note: buttons in index.html don't all have predictable IDs
-    // but we can manage active state manually if needed. 
-    // Simplified: root index.html uses specific ids for tab buttons
     if(tabId === 'quest') document.getElementById('tabBtn2')?.classList.add('active');
     if(tabId === 'records') document.getElementById('tabBtn3')?.classList.add('active');
 }
@@ -359,7 +357,12 @@ function startStage(stageIdx) {
   currentQuestions = slice.map(item => {
     let modeToUse = currentMode;
     if (currentMode === 'random') {
-        modeToUse = Math.random() > 0.5 ? (currentSeries==='year' ? 'yearToEvent' : 'personToDeed') : (currentSeries==='year' ? 'eventToYear' : 'deedToPerson');
+        const rnd = Math.random();
+        if (currentSeries === 'year') {
+           modeToUse = rnd > 0.5 ? 'yearToEvent' : 'eventToYear';
+        } else {
+           modeToUse = rnd > 0.5 ? 'personToDeed' : 'deedToPerson';
+        }
     }
 
     if (currentSeries === 'year') {
@@ -391,13 +394,12 @@ function nextQuestion() {
   if(input) {
       input.value = '';
       input.style.display = 'block';
-      input.focus();
+      setTimeout(() => input.focus(), 100);
   }
   
   document.getElementById('btnAttack').style.display = 'block';
   document.getElementById('btnNext').style.display = 'none';
   
-  // Set enemy info
   setText('enemyName', currentSeries==='year' ? '年号ゴブリン' : '歴史のエリート');
   document.getElementById('enemyEmoji').textContent = currentSeries==='year' ? '👺' : '🤺';
   document.getElementById('enemyHP').style.width = '100%';
@@ -405,7 +407,8 @@ function nextQuestion() {
 
 function checkAnswer() {
   const input = document.getElementById('battleInput').value.trim();
-  const correct = currentQuestions[currentIdx].a;
+  const qObj = currentQuestions[currentIdx];
+  const correct = qObj.a;
   
   const isCorrect = fuzzyMatch(input, correct);
 
@@ -413,14 +416,18 @@ function checkAnswer() {
     score++;
     showToast("正解！", "success");
     document.getElementById('enemyHP').style.width = '0%';
-    confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+    if(typeof confetti === 'function') confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
   } else {
     showToast(`不正解...`, "error");
-    wrongList.push({ q: currentQuestions[currentIdx].q, a: correct, user: input });
+    wrongList.push({ q: qObj.q, a: correct, user: input });
   }
 
   document.getElementById('btnAttack').style.display = 'none';
   document.getElementById('btnNext').style.display = 'block';
+  
+  // CRITICAL: Increment index HERE or in nextQuestion. 
+  // Let's increment HERE so btnNext transitions correctly.
+  currentIdx++;
 }
 
 function fuzzyMatch(input, correct) {
@@ -448,37 +455,28 @@ function endQuiz() {
     userLv++;
   }
   
-  if (userLv > oldLv) {
-      document.getElementById('lvUpArea').style.display = 'block';
-  } else {
-      document.getElementById('lvUpArea').style.display = 'none';
-  }
+  const lvUp = document.getElementById('lvUpArea');
+  if(lvUp) lvUp.style.display = (userLv > oldLv) ? 'block' : 'none';
 
-  // Record
   records.unshift({ date: new Date().toLocaleString(), series: currentSeries, stage: currentStage+1, score });
   if(records.length > 30) records.pop();
 
-  // Perfect Celebration
-  if (score === 10) {
-      document.getElementById('perfectCeleb').style.display = 'block';
-      showCert();
-  } else {
-      document.getElementById('perfectCeleb').style.display = 'none';
-  }
+  const pc = document.getElementById('perfectCeleb');
+  if(pc) pc.style.display = (score === 10) ? 'block' : 'none';
+  if (score === 10) showCert();
 
-  // Wrong Panel
   const wp = document.getElementById('wrongPanel');
   const rl = document.getElementById('reviewList');
   if (wrongList.length > 0) {
-      wp.style.display = 'block';
-      rl.innerHTML = wrongList.map(w => `
-          <div style="margin-bottom:8px; border-bottom:1px solid #333;">
+      if(wp) wp.style.display = 'block';
+      if(rl) rl.innerHTML = wrongList.map(w => `
+          <div style="margin-bottom:8px; border-bottom:1px solid #333; padding-bottom:4px;">
             <p style="color:var(--m-gold)">問: ${w.q}</p>
             <p>解: ${w.a}</p>
           </div>
       `).join('');
   } else {
-      wp.style.display = 'none';
+      if(wp) wp.style.display = 'none';
   }
 
   updateBars();
@@ -487,13 +485,15 @@ function endQuiz() {
 
 function showCert() {
     const overlay = document.getElementById('certOverlay');
+    if(!overlay) return;
     setText('certName', (currentUser ? currentUser.name : '冒険者') + ' 殿');
     setText('certDate', new Date().toLocaleDateString());
     overlay.classList.add('active');
 }
 
 function closeCert() {
-    document.getElementById('certOverlay').classList.remove('active');
+    const overlay = document.getElementById('certOverlay');
+    if(overlay) overlay.classList.remove('active');
 }
 
 function goHome() {
@@ -502,14 +502,14 @@ function goHome() {
 }
 
 function retryWrong() {
-    // Basic retry: just restart current stage
     startStage(currentStage);
 }
 
-/* --- Auth & System --- */
 function toggleAuth(isSignup) {
-    document.getElementById('loginFormArea').style.display = isSignup ? 'none' : 'block';
-    document.getElementById('signupFormArea').style.display = isSignup ? 'block' : 'none';
+    const l = document.getElementById('loginFormArea');
+    const s = document.getElementById('signupFormArea');
+    if(l) l.style.display = isSignup ? 'none' : 'block';
+    if(s) s.style.display = isSignup ? 'block' : 'none';
 }
 
 function handleLogin(e) {
@@ -521,7 +521,8 @@ function handleLogin(e) {
 
 function handleSignup(e) {
   if(e) e.preventDefault();
-  const name = document.getElementById('signupName').value || '冒険者';
+  const nameInput = document.getElementById('signupName');
+  const name = (nameInput && nameInput.value) ? nameInput.value : '冒険者';
   currentUser = { name, id: 'guest' };
   showScreen('screen-main');
   updateBars();
