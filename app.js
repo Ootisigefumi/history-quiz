@@ -1,14 +1,16 @@
 /**
  * 勉強RPG 歴史クエスト
  * app.js - Optimized for Root index.html (Retro UI)
- * FIX: Added Player HP logic, corrected toast class, fixed enemy HP width
+ * UPDATES: 
+ * 1. Stage Unlock Logic (10/10 to unlock next)
+ * 2. Recent Records with Detail/Review view
  */
 
 /* --- Supabase Config (Mock Placeholder) --- */
 let sb;
 async function initSB() {
   if (typeof supabase !== 'undefined') {
-    // Note: Constants for SB_URL/KEY are usually injected or hardcoded
+    // Supabase logic here if needed
   }
 }
 
@@ -143,7 +145,7 @@ const PERSON_DATA = [
   {person: '行基', deed: '仏教を広める一方、橋やため池をつくる。聖武天皇に協力して大仏建立を助ける。'},
   {person: '鑑真', deed: '唐の僧。何度も失敗して来日。唐招提寺を建てる。'},
   {person: '最澄', deed: '比叡山に延暦寺を建て、天台宗を広める。'},
-  {person: '空海', deed: '高野山に金剛峰寺を建て、真言宗を広める。'},
+  {person: '空海', deed: '高野山に金剛峰寺を建て、真言宗を広める. '},
   {person: '阿倍仲麻呂', deed: '遣唐使として唐に渡るが、帰国できずに唐の政府で役人として一生を終える。'},
   {person: '小野妹子', deed: '最初の遣隋使として隋へ。聖徳太子の手紙を隋の皇帝に渡す。'},
   {person: '平清盛', deed: '武士として初めて太政大臣になる。日宋貿易。'},
@@ -158,7 +160,7 @@ const PERSON_DATA = [
   {person: '上杉謙信', deed: '越後の戦国大名。武田信玄のライバル。'},
   {person: '織田信長', deed: '室町幕府を滅ぼし、天下統一を目指す。本能寺の変で。'},
   {person: '豊臣秀吉', deed: '天下統一を果たす。太閤検地や刀狩を行う。'},
-  {person: '徳川家康', deed: '江戸幕府を開き、260年続く太平の世の礎を築く。'},
+  {person: '徳川家康', deed: '江戸幕府を開き、260年続く太平の世の基礎を築く。'},
   {person: '徳川家光', deed: '江戸幕府の3代将軍。参勤交代を定例化し、鎖国を完成させる。'},
   {person: '徳川綱吉', deed: '江戸幕府の5代将軍。生類憐みの令を出す。朱子学を奨励。'},
   {person: '徳川吉宗', deed: '江戸幕府の8代将軍。享保の改革を行う。目安箱を設置。'},
@@ -168,7 +170,7 @@ const PERSON_DATA = [
   {person: '水野忠邦', deed: '老中として天保の改革を行う。株仲間の解散。'},
   {person: '大塩平八郎', deed: '元大阪町奉行所の役人。飢饉に苦しむ人々を救うため乱を起こす。'},
   {person: '西郷隆盛', deed: '薩摩藩士。薩長同盟を結ぶ。明治新政府で活躍するが、後に西南戦争。'},
-  {person: '大久保利通', deed: '薩摩藩士。岩倉使節団に参加。内務卿として新政府の基礎を固める。'},
+  {person: '大久保利通', deed: '薩摩藩士. 岩倉使節団に参加。内務卿として新政府の基礎を固める。'},
   {person: '木戸孝允', deed: '長州藩士（桂小五郎）。版籍奉還や廃藩置県を推進。'},
   {person: '坂本龍馬', deed: '土佐藩出身。薩長同盟の仲立ちをする。'},
   {person: '勝海舟', deed: '幕臣。咸臨丸で渡米。西郷隆盛と会談し、江戸城無血開城を実現。'},
@@ -211,7 +213,7 @@ const PERSON_DATA = [
   {person: '鈴木梅太郎', deed: 'ビタミンB1（オリザニン）の発見。'},
   {person: '長岡半太郎', deed: '原子モデルの研究。'},
   {person: '湯川秀樹', deed: '日本人初のノーベル賞受賞者（物理学賞）。中間子の存在を予言。'},
-  {person: '朝永振一郎', deed: 'ノーベル物理学賞受賞。量子電磁力学の研究。'},
+  {person: '朝永振一郎', deed: 'ノーベル物理学賞受賞。量子電磁力学の研究. '},
   {person: '黒澤明', deed: '映画監督。「羅生門」「七人の侍」。'},
   {person: '手塚治虫', deed: '漫画家。「鉄腕アトム」「火の鳥」。'},
   {person: '聖徳太子', deed: '十七条の憲法、冠位十二階。'},
@@ -289,6 +291,8 @@ function updateBars() {
     setText('statTotal', records.length);
     setText('statPerfect', records.filter(r => r.score === 10).length);
     setText('statTotalXP', records.reduce((sum, r) => sum + r.score * 10, 0));
+
+    renderRecords();
 }
 
 function setText(id, txt) {
@@ -307,19 +311,62 @@ function renderStageGrid() {
   labels.forEach((label, i) => {
     const btn = document.createElement('div');
     btn.className = 'retro-box stage-card';
-    btn.style.padding = '10px';
-    btn.style.cursor = 'pointer';
+    btn.style.padding = '8px';
     btn.style.textAlign = 'center';
     
+    // Stage Unlock Logic: Stage 1 is always open. Subsequent stages require previous one to be 10/10.
+    const isUnlocked = i === 0 || progArr[i-1] >= 10;
+    
     const high = progArr[i] || 0;
-    btn.innerHTML = `
-      <div style="font-size:0.6rem; color:var(--m-gold)">STAGE ${i+1}</div>
-      <div style="font-size:0.8rem; margin:4px 0;">${label}</div>
-      <div style="font-size:0.6rem;">記録: ${high}/10</div>
-    `;
-    btn.onclick = () => startStage(i);
+    if (isUnlocked) {
+      btn.style.cursor = 'pointer';
+      btn.innerHTML = `
+        <div style="font-size:0.55rem; color:var(--m-gold)">STAGE ${i+1}</div>
+        <div style="font-size:0.75rem; margin:2px 0;">${label}</div>
+        <div style="font-size:0.55rem;">記録: ${high}/10</div>
+        ${high >= 10 ? '<div style="color:var(--m-green); font-size:0.5rem;">★CLEAR★</div>' : ''}
+      `;
+      btn.onclick = () => startStage(i);
+    } else {
+      btn.style.opacity = '0.5';
+      btn.style.cursor = 'not-allowed';
+      btn.innerHTML = `
+        <div style="font-size:0.55rem;">STAGE ${i+1}</div>
+        <div style="font-size:0.75rem; color:#888;">🔒 封印</div>
+        <div style="font-size:0.5rem; color:var(--m-red); margin-top:2px;">要:前満点</div>
+      `;
+      btn.onclick = () => showToast("前のステージを満点でクリアしてください", "error");
+    }
     grid.appendChild(btn);
   });
+}
+
+function renderRecords() {
+    const list = document.getElementById('recordsList');
+    if (!list) return;
+    if (records.length === 0) {
+        list.innerHTML = '<p style="text-align:center; padding:10px;">まだ冒険の記録がありません</p>';
+        return;
+    }
+    list.innerHTML = records.map((r, i) => `
+        <div style="border-bottom:1px solid #333; padding:8px 0;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span>${r.date.split(' ')[0]} ${r.series==='year'?'年号':'人物'}-S${r.stage}</span>
+            <span style="color:${r.score===10?'var(--m-gold)':'#fff'}">${r.score}/10点</span>
+          </div>
+          ${r.wrongs && r.wrongs.length > 0 ? `
+            <button class="btn-sm" style="font-size:0.6rem; padding:2px 6px; margin-top:4px;" onclick="toggleRecordDetail(${i})">レビューを見る</button>
+            <div id="rec-detail-${i}" style="display:none; margin-top:6px; font-size:0.7rem; color:#ccc; background:#111; padding:4px; border:1px solid #444;">
+              ${r.wrongs.map(w => `<div>Q: ${w.q}<br>A: <span style="color:var(--m-gold)">${w.a}</span></div>`).join('<hr style="border-color:#222">')}
+            </div>
+          ` : '<div style="font-size:0.6rem; color:var(--m-green); margin-top:4px;">パーフェクト！</div>'}
+        </div>
+    `).join('');
+}
+
+function toggleRecordDetail(idx) {
+    const el = document.getElementById(`rec-detail-${idx}`);
+    if(el) el.style.display = (el.style.display === 'none') ? 'block' : 'none';
 }
 
 function switchTab(tabId) {
@@ -411,10 +458,6 @@ function nextQuestion() {
   
   document.getElementById('btnAttack').style.display = 'block';
   document.getElementById('btnNext').style.display = 'none';
-  
-  setText('enemyName', currentSeries==='year' ? '年号ゴブリン' : '歴史のエリート');
-  document.getElementById('enemyEmoji').textContent = currentSeries==='year' ? '👺' : '🤺';
-  document.getElementById('enemyHP').style.width = '100%';
 }
 
 function checkAnswer() {
@@ -454,7 +497,7 @@ function fuzzyMatch(input, correct) {
 
 function endQuiz() {
   showScreen('screen-result');
-  setText('rTitle', playerHP > 0 ? '勝利！' : '敗北...');
+  setText('rTitle', playerHP > 0 ? (score===10?'PERFECT!':'勝利！') : '敗北...');
   setText('rsCorrect', score);
   setText('rsWrong', 10 - score);
   const xp = score * 10;
@@ -473,8 +516,15 @@ function endQuiz() {
   const lvUp = document.getElementById('lvUpArea');
   if(lvUp) lvUp.style.display = (userLv > oldLv) ? 'block' : 'none';
 
-  records.unshift({ date: new Date().toLocaleString(), series: currentSeries, stage: currentStage+1, score });
-  if(records.length > 30) records.pop();
+  // Store record with wrongs for historical review
+  records.unshift({ 
+      date: new Date().toLocaleString(), 
+      series: currentSeries, 
+      stage: currentStage+1, 
+      score,
+      wrongs: [...wrongList]
+  });
+  if(records.length > 50) records.pop();
 
   const pc = document.getElementById('perfectCeleb');
   if(pc) pc.style.display = (score === 10) ? 'block' : 'none';
