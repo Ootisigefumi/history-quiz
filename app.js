@@ -1,6 +1,6 @@
 /**
  * 勉強RPG 歴史クエスト
- * app.js - Optimized & Final Version
+ * app.js - Optimized for Root index.html (Retro UI)
  */
 
 /* --- Supabase Config (Mock Placeholder) --- */
@@ -130,7 +130,7 @@ const PERSON_DATA = [
   {person: '聖徳太子', deed: '冠位十二階・十七条の憲法を制定。小野妹子を遣隋使として送る。'},
   {person: '中大兄皇子', deed: '蘇我氏を滅ぼして大化の改新を始める。後に、大津で即位して天智天皇に。'},
   {person: '元明天皇', deed: '710年に都を藤原京から平城京に移した女性の天皇。'},
-  {person: '聖武天皇', deed: '国ごとに国分寺を、東大寺に大仏をつくることを命令。墾田永年私財法を制定。'},
+  {person: '聖武天皇', deed: '国ごとに国分寺を、東大寺に大仏をつくることを命令。墾田永年私財法を制定. '},
   {person: '桓武天皇', deed: '平安京に都を移し、律令政治の立て直しに努める。坂上田村麻呂を東北地方に派遣。'},
   {person: '白河上皇', deed: '1086年、天皇をしりぞいて上皇となり、院政を始める。'},
   {person: '後鳥羽上皇', deed: '鎌倉幕府を倒しようと承久の乱を起こすが、幕府軍に敗れ、隠岐に流される。'},
@@ -201,7 +201,7 @@ const PERSON_DATA = [
   {person: '宮沢賢治', deed: '「銀河鉄道の夜」「注文の多い料理店」。「雨ニモマケズ」。'},
   {person: '太宰治', deed: '「走れメロス」「人間失格」の著者。'},
   {person: '福沢諭吉', deed: '「学問のすゝめ」を著す。慶應義塾の創設。'},
-  {person: '新渡戸稲造', deed: '「武士道」の著者。国際連盟次長。'},
+  {person: '新渡戸稲造', deed: '「武士道」の著者。国際連盟次長. '},
   {person: '内村鑑三', deed: 'キリスト教思想家。非戦論を唱える。'},
   {person: '北里柴三郎', deed: '細菌学者。ペスト菌の発見。破傷風の治療法を開発。'},
   {person: '野口英世', deed: '細菌学者。黄熱病の研究中にアフリカで病死。'},
@@ -247,7 +247,8 @@ const ROLES = [
 ];
 
 /* --- Global State --- */
-let gameMode = 'year'; 
+let currentSeries = 'year'; 
+let currentMode = 'yearToEvent'; 
 let currentStage = 0;
 let currentQuestions = [];
 let currentIdx = 0;
@@ -257,88 +258,123 @@ let userLv = 1;
 let userXP = 0;
 let progress = { year: Array(10).fill(0), person: Array(12).fill(0) };
 let records = [];
+let wrongList = [];
 
 /* --- Rendering --- */
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  if (id === 'screen-main') renderStageGrid();
 }
 
 function updateBars() {
     const role = getRole(userLv);
     const next = getNextRole(userLv);
-    document.getElementById('user-name-display').textContent = currentUser ? currentUser.name : 'ゲスト';
-    document.getElementById('user-role-display').textContent = role.title;
-    document.getElementById('user-lv').textContent = userLv;
-    
-    // XP Bar
-    const xpNeeded = userLv * 100;
-    const pct = Math.min(100, (userXP / xpNeeded) * 100);
-    document.getElementById('xp-fill').style.width = pct + '%';
 
-    // Rank Info in Progress Screen
-    const rankInfo = document.getElementById('rank-info');
-    if (rankInfo) {
-        rankInfo.innerHTML = `
-            <div>現在の役職: <span class="highlight">${role.title}</span> (Lv.${userLv})</div>
-            ${next.lv > userLv ? `<div>次なる高み: <span class="highlight">${next.title}</span> (Lv.${next.lv}で昇進)</div>` : '<div>あなたは歴史の頂点に達しました！</div>'}
-        `;
+    setText('headerLv', `Lv.${userLv}`);
+    setText('headerClass', role.title);
+    setText('headerXP', userXP);
+    setText('nextLVXP', userLv * 100);
+    setText('nextRole', next.title);
+    setText('nextRoleLv', next.lv);
+
+    const bar = document.getElementById('headerXPBar');
+    if (bar) {
+        const pct = Math.min(100, (userXP / (userLv * 100)) * 100);
+        bar.style.width = pct + '%';
     }
+
+    setText('statTotal', records.length);
+    setText('statPerfect', records.filter(r => r.score === 10).length);
+    setText('statTotalXP', records.reduce((sum, r) => sum + r.score * 10, 0));
+}
+
+function setText(id, txt) {
+    const el = document.getElementById(id);
+    if(el) el.textContent = txt;
 }
 
 function renderStageGrid() {
-  const grid = document.getElementById('stage-grid');
+  const grid = document.getElementById('stageGrid');
+  if (!grid) return;
   grid.innerHTML = '';
   
-  const labels = gameMode === 'year' ? YEAR_STAGE_LABELS : PERSON_STAGE_LABELS;
-  const dataRef = gameMode === 'year' ? YEAR_DATA : PERSON_DATA;
-  const progArr = gameMode === 'year' ? progress.year : progress.person;
+  const labels = currentSeries === 'year' ? YEAR_STAGE_LABELS : PERSON_STAGE_LABELS;
+  const progArr = currentSeries === 'year' ? progress.year : progress.person;
 
   labels.forEach((label, i) => {
     const btn = document.createElement('div');
-    btn.className = 'stage-card';
+    btn.className = 'retro-box stage-card';
+    btn.style.padding = '10px';
+    btn.style.cursor = 'pointer';
+    btn.style.textAlign = 'center';
+    
     const high = progArr[i] || 0;
     btn.innerHTML = `
-      <div class="stage-num">STAGE ${i+1}</div>
-      <div class="stage-label">${label}</div>
-      <div class="stage-best">Best: ${high}/10</div>
+      <div style="font-size:0.6rem; color:var(--m-gold)">STAGE ${i+1}</div>
+      <div style="font-size:0.8rem; margin:4px 0;">${label}</div>
+      <div style="font-size:0.6rem;">記録: ${high}/10</div>
     `;
     btn.onclick = () => startStage(i);
     grid.appendChild(btn);
   });
 }
 
-function setMode(mode) {
-  gameMode = mode;
-  document.getElementById('tab-year').classList.toggle('active', mode==='year');
-  document.getElementById('tab-person').classList.toggle('active', mode==='person');
-  renderStageGrid();
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    
+    const content = document.getElementById(`tab-${tabId}`);
+    if (content) content.classList.add('active');
+    
+    // Find button - note: buttons in index.html don't all have predictable IDs
+    // but we can manage active state manually if needed. 
+    // Simplified: root index.html uses specific ids for tab buttons
+    if(tabId === 'quest') document.getElementById('tabBtn2')?.classList.add('active');
+    if(tabId === 'records') document.getElementById('tabBtn3')?.classList.add('active');
+}
+
+function setSeries(series) {
+    currentSeries = series;
+    document.getElementById('btnSeriesYear').classList.toggle('active', series==='year');
+    document.getElementById('btnSeriesPerson').classList.toggle('active', series==='person');
+    renderStageGrid();
+}
+
+function setMode(mode, btn) {
+    currentMode = mode;
+    document.querySelectorAll('#modeBtn1, #modeBtn2, #modeBtn3').forEach(b => b.classList.remove('active'));
+    if(btn) btn.classList.add('active');
 }
 
 function startStage(stageIdx) {
   currentStage = stageIdx;
   score = 0;
   currentIdx = 0;
+  wrongList = [];
   
-  const dataSet = gameMode === 'year' ? YEAR_DATA : PERSON_DATA;
+  const dataSet = currentSeries === 'year' ? YEAR_DATA : PERSON_DATA;
   const slice = dataSet.slice(stageIdx * 10, (stageIdx + 1) * 10);
   
   currentQuestions = slice.map(item => {
-    if (gameMode === 'year') {
-      return Math.random() > 0.5 ? 
-        { q: `${item.event}が起きた年は？`, a: item.year.toString() } :
-        { q: `${item.year}年に起きた出来事は？`, a: item.event };
+    let modeToUse = currentMode;
+    if (currentMode === 'random') {
+        modeToUse = Math.random() > 0.5 ? (currentSeries==='year' ? 'yearToEvent' : 'personToDeed') : (currentSeries==='year' ? 'eventToYear' : 'deedToPerson');
+    }
+
+    if (currentSeries === 'year') {
+      return modeToUse === 'eventToYear' ? 
+        { q: `${item.event} が起きた年は？`, a: item.year.toString() } :
+        { q: `${item.year}年 に起きた出来事は？`, a: item.event };
     } else {
-      return Math.random() > 0.5 ?
-        { q: `${item.person}の功績は？`, a: item.deed } :
-        { q: `${item.deed}を行った人物は？`, a: item.person };
+      return modeToUse === 'deedToPerson' ?
+        { q: `${item.deed} を行った人物は？`, a: item.person } :
+        { q: `${item.person} の功績は？`, a: item.deed };
     }
   });
 
-  // Shuffle questions
   currentQuestions.sort(() => Math.random() - 0.5);
-
-  showScreen('screen-quiz');
+  showScreen('screen-battle');
   nextQuestion();
 }
 
@@ -348,80 +384,111 @@ function nextQuestion() {
     return;
   }
   const qObj = currentQuestions[currentIdx];
-  document.getElementById('quiz-q').textContent = qObj.q;
-  document.getElementById('quiz-input').value = '';
-  document.getElementById('quiz-input').focus();
-  document.getElementById('quiz-progress').textContent = `${currentIdx+1} / 10`;
+  const qEl = document.getElementById('battleQ');
+  if(qEl) qEl.textContent = qObj.q;
+  
+  const input = document.getElementById('battleInput');
+  if(input) {
+      input.value = '';
+      input.style.display = 'block';
+      input.focus();
+  }
+  
+  document.getElementById('btnAttack').style.display = 'block';
+  document.getElementById('btnNext').style.display = 'none';
+  
+  // Set enemy info
+  setText('enemyName', currentSeries==='year' ? '年号ゴブリン' : '歴史のエリート');
+  document.getElementById('enemyEmoji').textContent = currentSeries==='year' ? '👺' : '🤺';
+  document.getElementById('enemyHP').style.width = '100%';
 }
 
-function submitAnswer() {
-  const input = document.getElementById('quiz-input').value.trim();
+function checkAnswer() {
+  const input = document.getElementById('battleInput').value.trim();
   const correct = currentQuestions[currentIdx].a;
   
-  // Fuzzy match for text
-  let isCorrect = (input === correct);
-  if (!isCorrect && isNaN(Number(correct))) {
-      // Very simple fuzzy: if input is part of answer or vice versa and length > 2
-      if (input.length >= 2 && (correct.includes(input) || input.includes(correct))) {
-          isCorrect = true;
-      }
-  }
+  const isCorrect = fuzzyMatch(input, correct);
 
   if (isCorrect) {
     score++;
     showToast("正解！", "success");
+    document.getElementById('enemyHP').style.width = '0%';
+    confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
   } else {
-    showToast(`残念！ 正解は: ${correct}`, "error");
+    showToast(`不正解...`, "error");
+    wrongList.push({ q: currentQuestions[currentIdx].q, a: correct, user: input });
   }
 
-  currentIdx++;
-  nextQuestion();
+  document.getElementById('btnAttack').style.display = 'none';
+  document.getElementById('btnNext').style.display = 'block';
+}
+
+function fuzzyMatch(input, correct) {
+    if (input === correct) return true;
+    if (isNaN(Number(correct))) {
+        if (input.length >= 2 && (correct.includes(input) || input.includes(correct))) return true;
+    }
+    return false;
 }
 
 function endQuiz() {
   showScreen('screen-result');
-  document.getElementById('result-score').textContent = score;
+  setText('rsCorrect', score);
+  setText('rsWrong', 10 - score);
+  const xp = score * 10;
+  setText('rsXP', `+${xp}`);
   
-  // Update Progress
-  const progArr = gameMode === 'year' ? progress.year : progress.person;
+  const progArr = currentSeries === 'year' ? progress.year : progress.person;
   if (score > progArr[currentStage]) progArr[currentStage] = score;
 
-  // XP & Level
-  const gainedXP = score * 10;
-  userXP += gainedXP;
+  userXP += xp;
+  const oldLv = userLv;
   while (userXP >= userLv * 100) {
     userXP -= userLv * 100;
     userLv++;
-    showToast(`レベルアップ！ Lv.${userLv}になりました！`, "success");
+  }
+  
+  if (userLv > oldLv) {
+      document.getElementById('lvUpArea').style.display = 'block';
+  } else {
+      document.getElementById('lvUpArea').style.display = 'none';
   }
 
   // Record
-  records.unshift({
-      date: new Date().toLocaleString(),
-      mode: gameMode==='year' ? '年号' : '人物',
-      stage: currentStage + 1,
-      score: score
-  });
-  if(records.length > 20) records.pop();
+  records.unshift({ date: new Date().toLocaleString(), series: currentSeries, stage: currentStage+1, score });
+  if(records.length > 30) records.pop();
+
+  // Perfect Celebration
+  if (score === 10) {
+      document.getElementById('perfectCeleb').style.display = 'block';
+      showCert();
+  } else {
+      document.getElementById('perfectCeleb').style.display = 'none';
+  }
+
+  // Wrong Panel
+  const wp = document.getElementById('wrongPanel');
+  const rl = document.getElementById('reviewList');
+  if (wrongList.length > 0) {
+      wp.style.display = 'block';
+      rl.innerHTML = wrongList.map(w => `
+          <div style="margin-bottom:8px; border-bottom:1px solid #333;">
+            <p style="color:var(--m-gold)">問: ${w.q}</p>
+            <p>解: ${w.a}</p>
+          </div>
+      `).join('');
+  } else {
+      wp.style.display = 'none';
+  }
 
   updateBars();
   saveLocal();
-
-  // Full Score Celebration
-  if (score === 10) {
-      celebratePerfect();
-  }
 }
 
-function celebratePerfect() {
+function showCert() {
     const overlay = document.getElementById('certOverlay');
-    overlay.querySelector('.cert-body').innerHTML = `
-        <h3>合格証書</h3>
-        <p>${currentUser ? currentUser.name : '歴史の探究者'} 殿</p>
-        <p>貴殿は「${gameMode==='year' ? YEAR_STAGE_LABELS[currentStage] : PERSON_STAGE_LABELS[currentStage]}」における<br>全ての試練を見事に突破いたしました。</p>
-        <p>その卓越した知識を讃え、ここに証します。</p>
-        <div style="font-size:0.8rem; margin-top:20px;">称号: ${getRole(userLv).title}</div>
-    `;
+    setText('certName', (currentUser ? currentUser.name : '冒険者') + ' 殿');
+    setText('certDate', new Date().toLocaleDateString());
     overlay.classList.add('active');
 }
 
@@ -429,26 +496,52 @@ function closeCert() {
     document.getElementById('certOverlay').classList.remove('active');
 }
 
-function showProgress() {
-    showScreen('screen-progress');
-    const log = document.getElementById('record-log');
-    log.innerHTML = records.map(r => `
-        <div class="record-item">
-            <span>[${r.date}]</span> <strong>${r.mode} STAGE ${r.stage}</strong> - ${r.score}点
-        </div>
-    `).join('');
-    updateBars();
+function goHome() {
+    showScreen('screen-main');
+    switchTab('quest');
+}
+
+function retryWrong() {
+    // Basic retry: just restart current stage
+    startStage(currentStage);
+}
+
+/* --- Auth & System --- */
+function toggleAuth(isSignup) {
+    document.getElementById('loginFormArea').style.display = isSignup ? 'none' : 'block';
+    document.getElementById('signupFormArea').style.display = isSignup ? 'block' : 'none';
+}
+
+function handleLogin(e) {
+  if(e) e.preventDefault();
+  currentUser = { name: '冒険者', id: 'guest' };
+  showScreen('screen-main');
+  updateBars();
+}
+
+function handleSignup(e) {
+  if(e) e.preventDefault();
+  const name = document.getElementById('signupName').value || '冒険者';
+  currentUser = { name, id: 'guest' };
+  showScreen('screen-main');
+  updateBars();
+}
+
+function logout() {
+  currentUser = null;
+  localStorage.removeItem('histRPG_data');
+  location.reload();
 }
 
 function showToast(msg, type="info") {
   const t = document.getElementById('toast');
+  if(!t) return;
   t.textContent = msg;
   t.style.background = type === 'success' ? '#2ecc71' : (type === 'error' ? '#e74c3c' : '#3498db');
   t.classList.add('active');
   setTimeout(() => t.classList.remove('active'), 2500);
 }
 
-/* --- Role Logic --- */
 function getRole(lv) {
   let res = ROLES[0];
   for (let r of ROLES) {
@@ -464,7 +557,6 @@ function getNextRole(lv) {
   return ROLES[ROLES.length - 1];
 }
 
-/* --- Persistence --- */
 function saveLocal() {
     const d = { currentUser, userLv, userXP, progress, records };
     localStorage.setItem('histRPG_data', JSON.stringify(d));
@@ -481,26 +573,9 @@ function loadLocal() {
     if(d.records) records = d.records;
 }
 
-function handleLogin(e) {
-  e.preventDefault();
-  // Simple Mock Auth
-  currentUser = { name: '冒険者', id: 'guest' };
-  showScreen('screen-main');
-  renderStageGrid();
-  updateBars();
-}
-
-function logout() {
-  currentUser = null;
-  localStorage.removeItem('histRPG_data'); // Clear for demo
-  location.reload();
-}
-
 /* --- Init --- */
 document.addEventListener('DOMContentLoaded', () => {
     loadLocal();
     showScreen('screen-auth'); 
-    // Ensure cert is hidden initially
-    const cert = document.getElementById('certOverlay');
-    if(cert) cert.classList.remove('active');
+    updateBars();
 });
