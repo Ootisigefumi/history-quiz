@@ -1,16 +1,14 @@
 /**
  * 勉強RPG 歴史クエスト
  * app.js - Optimized for Root index.html (Retro UI)
- * UPDATES: 
- * 1. Stage Unlock Logic (10/10 to unlock next)
- * 2. Recent Records with Detail/Review view
+ * FIX: Map 'yearToEvent'/'eventToYear' modes to Person equivalents (personToDeed/deedToPerson)
  */
 
 /* --- Supabase Config (Mock Placeholder) --- */
 let sb;
 async function initSB() {
   if (typeof supabase !== 'undefined') {
-    // Supabase logic here if needed
+    // Supabase logic
   }
 }
 
@@ -18,7 +16,7 @@ async function initSB() {
 const YEAR_DATA = [
   {year: 239, event: '邪馬台国の卑弥呼が魏に使いを送る'},
   {year: 538, event: '百済から仏教が伝来する'},
-  {year: 593, event: '聖徳太子が推古天皇の摂政になる'},
+  {year: 593, event: '聖徳太子が推古天皇의 摂政になる'},
   {year: 607, event: '遣隋使として小野妹子を送る'},
   {year: 645, event: '大化の改新で中大兄皇子、中臣鎌足が蘇我氏を倒す'},
   {year: 672, event: '壬申の乱'},
@@ -141,11 +139,11 @@ const PERSON_DATA = [
   {person: '明治天皇', deed: '五か条の御誓文・大日本帝国憲法・教育勅語などを発布し、天皇の権威を確立する。'},
   {person: '中臣鎌足', deed: '中大兄皇子に協力して大化の改新をすすめる。天智天皇から藤原の姓を授かる。'},
   {person: '藤原道長', deed: '娘を次々と天皇のきさきにして、摂政として摂関政治の全盛期を築く。'},
-  {person: '菅原道真', deed: '遣唐使の廃止を提案。後に九州の大宰府に流され、現在は学問の神様。'},
+  {person: '菅原道真', deed: '遣唐使の廃止を提案. 後に九州の大宰府に流され、現在は学問の神様。'},
   {person: '行基', deed: '仏教を広める一方、橋やため池をつくる。聖武天皇に協力して大仏建立を助ける。'},
   {person: '鑑真', deed: '唐の僧。何度も失敗して来日。唐招提寺を建てる。'},
   {person: '最澄', deed: '比叡山に延暦寺を建て、天台宗を広める。'},
-  {person: '空海', deed: '高野山に金剛峰寺を建て、真言宗を広める. '},
+  {person: '空海', deed: '高野山に金剛峰寺を建て、真言宗を広める。'},
   {person: '阿倍仲麻呂', deed: '遣唐使として唐に渡るが、帰国できずに唐の政府で役人として一生を終える。'},
   {person: '小野妹子', deed: '最初の遣隋使として隋へ。聖徳太子の手紙を隋の皇帝に渡す。'},
   {person: '平清盛', deed: '武士として初めて太政大臣になる。日宋貿易。'},
@@ -160,7 +158,7 @@ const PERSON_DATA = [
   {person: '上杉謙信', deed: '越後の戦国大名。武田信玄のライバル。'},
   {person: '織田信長', deed: '室町幕府を滅ぼし、天下統一を目指す。本能寺の変で。'},
   {person: '豊臣秀吉', deed: '天下統一を果たす。太閤検地や刀狩を行う。'},
-  {person: '徳川家康', deed: '江戸幕府を開き、260年続く太平の世の基礎を築く。'},
+  {person: '徳川家康', deed: '江戸幕府を開き、260年続く太平の世の礎を築く。'},
   {person: '徳川家光', deed: '江戸幕府の3代将軍。参勤交代を定例化し、鎖国を完成させる。'},
   {person: '徳川綱吉', deed: '江戸幕府の5代将軍。生類憐みの令を出す。朱子学を奨励。'},
   {person: '徳川吉宗', deed: '江戸幕府の8代将軍。享保の改革を行う。目安箱を設置。'},
@@ -170,7 +168,7 @@ const PERSON_DATA = [
   {person: '水野忠邦', deed: '老中として天保の改革を行う。株仲間の解散。'},
   {person: '大塩平八郎', deed: '元大阪町奉行所の役人。飢饉に苦しむ人々を救うため乱を起こす。'},
   {person: '西郷隆盛', deed: '薩摩藩士。薩長同盟を結ぶ。明治新政府で活躍するが、後に西南戦争。'},
-  {person: '大久保利通', deed: '薩摩藩士. 岩倉使節団に参加。内務卿として新政府の基礎を固める。'},
+  {person: '大久保利通', deed: '薩摩藩士。岩倉使節団に参加。内務卿として新政府の基礎を固める。'},
   {person: '木戸孝允', deed: '長州藩士（桂小五郎）。版籍奉還や廃藩置県を推進。'},
   {person: '坂本龍馬', deed: '土佐藩出身。薩長同盟の仲立ちをする。'},
   {person: '勝海舟', deed: '幕臣。咸臨丸で渡米。西郷隆盛と会談し、江戸城無血開城を実現。'},
@@ -183,7 +181,7 @@ const PERSON_DATA = [
   {person: '山県有朋', deed: '徴兵制を確立。内閣総理大臣を2度務める。軍部大臣現役武官制。'},
   {person: '原敬', deed: '初の本格的な政党内閣を組織。「平民宰相」と呼ばれる。'},
   {person: '犬養毅', deed: '五・一五事件で暗殺される。政党政治の終焉。'},
-  {person: '吉田茂', deed: '戦後の首相。サンフランシスコ平和条約を結ぶ。'},
+  {person: '吉田茂', deed: '戦後の首相。サンフランシスコ平和条約を結ぶ. '},
   {person: '佐藤栄作', deed: '非核三原則を提唱。沖縄返還を実現。'},
   {person: '田中角栄', deed: '日中国交正常化を実現。「日本列島改造論」。'},
   {person: '雪舟', deed: '水墨画を日本風に完成させる。'},
@@ -213,13 +211,13 @@ const PERSON_DATA = [
   {person: '鈴木梅太郎', deed: 'ビタミンB1（オリザニン）の発見。'},
   {person: '長岡半太郎', deed: '原子モデルの研究。'},
   {person: '湯川秀樹', deed: '日本人初のノーベル賞受賞者（物理学賞）。中間子の存在を予言。'},
-  {person: '朝永振一郎', deed: 'ノーベル物理学賞受賞。量子電磁力学の研究. '},
+  {person: '朝永振一郎', deed: 'ノーベル物理学賞受賞。量子電磁力学の研究。'},
   {person: '黒澤明', deed: '映画監督。「羅生門」「七人の侍」。'},
   {person: '手塚治虫', deed: '漫画家。「鉄腕アトム」「火の鳥」。'},
   {person: '聖徳太子', deed: '十七条の憲法、冠位十二階。'},
   {person: '空海', deed: '真言宗。高野山。'},
   {person: '最澄', deed: '天台宗。比叡山。'},
-  {person: '法然', deed: '浄土宗。専修念仏。'},
+  {person: '法然', deed: '浄土宗. 専修念仏。'},
   {person: '親鸞', deed: '浄土真宗。悪人正機。'},
   {person: '一遍', deed: '時宗。踊念仏。'},
   {person: '栄西', deed: '臨済宗。座禅。茶の普及。'},
@@ -314,7 +312,6 @@ function renderStageGrid() {
     btn.style.padding = '8px';
     btn.style.textAlign = 'center';
     
-    // Stage Unlock Logic: Stage 1 is always open. Subsequent stages require previous one to be 10/10.
     const isUnlocked = i === 0 || progArr[i-1] >= 10;
     
     const high = progArr[i] || 0;
@@ -405,6 +402,13 @@ function startStage(stageIdx) {
   
   currentQuestions = slice.map(item => {
     let modeToUse = currentMode;
+    
+    // Normalize mode for Person series (Map year-based labels to person/deed logic)
+    if (currentSeries === 'person') {
+       if (currentMode === 'yearToEvent') modeToUse = 'personToDeed';
+       if (currentMode === 'eventToYear') modeToUse = 'deedToPerson';
+    }
+
     if (currentMode === 'random') {
         const rnd = Math.random();
         if (currentSeries === 'year') {
@@ -419,6 +423,7 @@ function startStage(stageIdx) {
         { q: `${item.event} が起きた年は？`, a: item.year.toString() } :
         { q: `${item.year}年 に起きた出来事は？`, a: item.event };
     } else {
+      // PERSON Series Logic
       return modeToUse === 'deedToPerson' ?
         { q: `${item.deed} を行った人物は？`, a: item.person } :
         { q: `${item.person} の功績は？`, a: item.deed };
@@ -490,6 +495,7 @@ function checkAnswer() {
 function fuzzyMatch(input, correct) {
     if (input === correct) return true;
     if (isNaN(Number(correct))) {
+        // Broaden fuzzy match for long deeds/names
         if (input.length >= 2 && (correct.includes(input) || input.includes(correct))) return true;
     }
     return false;
@@ -516,7 +522,6 @@ function endQuiz() {
   const lvUp = document.getElementById('lvUpArea');
   if(lvUp) lvUp.style.display = (userLv > oldLv) ? 'block' : 'none';
 
-  // Store record with wrongs for historical review
   records.unshift({ 
       date: new Date().toLocaleString(), 
       series: currentSeries, 
